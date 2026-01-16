@@ -68,7 +68,6 @@ Nivarya-Setu/
     Visit `http://localhost:5000/` in your browser.
 
 ## Contributing
-## Contributing
 Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for institutional guidelines.
 
 ## Contact
