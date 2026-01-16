@@ -1,6 +1,6 @@
-# Infinity Trade
+# Nivarya Setu
 
-Infinity Trade is a professional-grade trading simulation platform tailored for the Indian Stock Market. It provides a realistic environment for testing trading strategies on equities, derivatives, and mutual funds using real-time market data.
+Nivarya Setu is a professional-grade trading simulation platform tailored for the Indian Stock Market. It provides a realistic environment for testing trading strategies on equities, derivatives, and mutual funds using real-time market data.
 
 ![Platform Status](https://img.shields.io/badge/Status-Live-green) ![Market](https://img.shields.io/badge/Market-NSE%2FBSE-blue) ![Data](https://img.shields.io/badge/Data-Real--Time-orange)
 
@@ -11,6 +11,11 @@ Infinity Trade is a professional-grade trading simulation platform tailored for 
 -   **Professional Charting**: Integrated TradingView charts for advanced technical analysis.
 -   **Order Terminal**: Supports Market, Limit, and Intraday/Delivery order types.
 
+**Institutional Onboarding**
+-   **Swift Digital Entry**: Lightning-fast, paperless registration.
+-   **AI-Powered KYC**: Secure, frictionless verification process.
+-   **Interactive FAQ**: Comprehensive accordion-style guide for new traders.
+
 **Advanced Modules**
 -   **Mutual Funds & SIPs**: Dedicated section to explore funds and calculate returns.
 -   **F&O (Futures & Options)**: Trade derivatives with simulated margin requirements.
@@ -20,9 +25,9 @@ Infinity Trade is a professional-grade trading simulation platform tailored for 
 
 -   **Frontend:** 
     -   HTML5 (Single Page Architecture)
-    -   React.js 18 (via CDN, no Node.js build required)
+    -   React.js 18 (Functional Components)
     -   Babel Standalone (In-browser JSX compilation)
--   **Styling:** Tailwind CSS (via CDN)
+-   **Styling:** Vanilla CSS (Institutional Dark Theme)
 -   **Backend:** Python (Flask Framework)
 -   **Data Provider:** `yfinance` (Yahoo Finance API)
 -   **Charting:** TradingView Widget
@@ -31,13 +36,11 @@ Infinity Trade is a professional-grade trading simulation platform tailored for 
 ## Project Structure
 
 ```bash
-Infinity-Trade/
+Nivarya-Setu/
 ├── src/
 │   ├── app.py              # Main Flask Application Entry Point
-│   ├── config.py           # Configuration Settings
-│   ├── client.py           # Binance Client (Legacy/Optional)
-│   ├── core/               # Order Execution Logic
 │   └── platform/
+│       ├── assets/         # High-fidelity mockups and images
 │       └── index.html      # Main Single-Page React Application
 ├── requirements.txt        # Python Dependencies
 ├── README.md               # Project Documentation
@@ -69,15 +72,15 @@ Follow these steps to deploy the application locally.
 
 4.  **Access the Platform**
     Open your web browser and navigate to:
-    http://localhost:5000/platform
+    http://localhost:5000/
 
 ## Deployment
 
 To deploy this application to a production environment (e.g., Render, Heroku, or Vercel):
 
 1.  **Backend**: Deploy the Flask app (`src/app.py`) as a web service. Ensure dependencies in `requirements.txt` are installed.
-2.  **Environment Variables**: Set up `FLASK_ENV=production` and any necessary API keys in your hosting provider's dashboard.
-3.  **Static Files**: The Flask app is configured to serve the React frontend (`index.html`) automatically.
+2.  **Environment Variables**: Set up `FLASK_ENV=production` and any necessary API keys (like `FIREBASE_API_KEY`) in your hosting provider's dashboard.
+3.  **Static Files**: The Flask app is configured to serve the React frontend (`index.html`) automatically from the root.
 
 ## Contributing
 
@@ -95,5 +98,5 @@ For any queries, feel free to reach out:
 [![Linktree](https://img.shields.io/badge/Linktree-39E09B?style=for-the-badge&logo=linktree&logoColor=white)](https://linktr.ee/brmedhini)
 
 <p align="left">
-Thank you for checking out the Infinity Trade project! Feel free to explore and contribute.
+Thank you for checking out the Nivarya Setu project! Feel free to explore and contribute.
 </p>
