@@ -1,4 +1,4 @@
-# Contributing to Infinity Trade
+# Contributing to Nivarya Setu
 
 We handle code contributions through GitHub Pull Requests. Here is how you can get started.
 
@@ -22,10 +22,10 @@ git checkout -b feature/your-feature-name
 
 ### 4. Configuration
 1.  Create a `.env` file in the `src/` directory.
-2.  Add your environment keys if needed (Platform uses Yahoo Finance which is free, so mostly no keys needed for basic setup).
+2.  Add your environment keys (e.g., `FIREBASE_API_KEY=your_key_here`).
 
 ### 5. Run the Project
-This project uses a Flask backend and React frontend. You must run the backend server.
+This project uses a Flask backend and React frontend.
 
 **Terminal:**
 1.  Install dependencies:
@@ -37,17 +37,17 @@ This project uses a Flask backend and React frontend. You must run the backend s
     python src/app.py
     ```
 3.  Open in browser:
-    http://localhost:5000/platform
+    http://localhost:5000/
 
 ### 6. Make Your Changes
 Implement your feature or fix. Ensure your code follows the project's style guide:
--   **Frontend:** Professional White/Black theme (Tailwind CSS).
+-   **Frontend:** Professional Institutional Dark Theme (Vanilla CSS).
 -   **Backend:** Python (PEP 8 standards).
 
 ### 7. Commit and Push
 ```bash
 git add .
-git commit -m "Add a meaningful commit message"
+git commit -m "index file" # Follow the naming convention: "filename file"
 git push origin feature/your-feature-name
 ```
 
@@ -57,7 +57,7 @@ git push origin feature/your-feature-name
 3.  Select your feature branch and submit.
 
 ## Code Style
--   **HTML/CSS:** Maintain professional design consistency (Tailwind).
+-   **HTML/CSS:** Maintain professional design consistency.
 -   **JavaScript:** Use React functional components and ES6+ syntax.
 -   **Python:** Follow PEP 8 guidelines.
--   **Commits:** Keep commits atomic and descriptive.
+-   **Commits:** Use short, descriptive commit messages followed by "file" as per project guidelines.
