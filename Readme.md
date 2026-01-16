@@ -1,6 +1,6 @@
 # Nivarya Setu
 
-Nivarya Setu is a professional-grade trading simulation platform tailored for the Indian Stock Market. It provides a realistic environment for testing trading strategies on equities, derivatives, and mutual funds using real-time market data.
+Nivarya Setu is trading simulation platform tailored for the Indian Stock Market. It provides a realistic environment for testing trading strategies on equities, derivatives, and mutual funds using real-time market data.
 
 ## Key Features
 
