@@ -1,74 +1,75 @@
-# Nivarya Setu
+# Nivarya Setu: Advanced Trading Simulation Platform
 
-Nivarya Setu is trading simulation platform tailored for the Indian Stock Market. It provides a realistic environment for testing trading strategies on equities, derivatives, and mutual funds using real-time market data.
+Nivarya Setu is an institutional-grade trading simulation environment designed for the Indian capital markets. The platform provides a high-fidelity interface for executing and testing trading strategies across multiple asset classes, including equities, derivatives, and mutual funds, utilizing synchronized market data.
 
-![React](https://img.shields.io/badge/Frontend-React_18-blue?style=for-the-badge&logo=react)
-![Python](https://img.shields.io/badge/Backend-Python_Flask-green?style=for-the-badge&logo=python)
+## Executive Overview
 
-## Overview
+The platform is engineered to facilitate financial literacy and strategy validation through a sophisticated, zero-latency simulation engine. By leveraging a decoupled architectural pattern, Nivarya Setu ensures high availability and modularity, providing users with a professional terminal experience.
 
-Nivarya Setu is designed for high-performance trading simulation. By separating the logic into modular components, the platform ensures scalability and a premium user experience.
+## Technology Stack and Language Classification
 
-## Language Breakdown
-*Note: GitHub classifies the React frontend under "JavaScript". All logic in `src/platform/app.jsx` is written using React functional components and hooks.*
+The project utilizes a modern full-stack architecture. For administrative transparency on version control platforms, the following language distribution is maintained:
 
-- **Python (Flask)**: Handles the API, user portfolio state, and market data simulation.
-- **JavaScript (React/JSX)**: Manages the entire UI, real-time updates, and interactive charting.
-- **CSS3**: Implementation of a custom, institutional-grade dark theme tailored for financial terminals.
-- **HTML5**: Semi-semantic structure for the core application shell.
+*   **Backend (Python/Flask)**: Manages the core simulation logic, RESTful API endpoints, and persistent user state.
+*   **Frontend (React/JSX)**: Implements complex UI components and real-time data streaming logic.
+*   **Styling (Vanilla CSS)**: Employs a bespoke institutional dark theme optimized for financial data density.
+*   **Structure (HTML5)**: Provides the semantic foundation for the application shell.
 
-## Key Features
+*Note: In repository analytics, React components are categorized under JavaScript. All frontend logic resides within `src/platform/app.jsx` using modern functional paradigms.*
 
-### Core Trading
-- **Real-Time Data Integration**: Fetches live quotes for NSE/BSE stocks, commodities, and forex via Yahoo Finance.
-- **Professional Charting**: Integrated TradingView charts for advanced technical analysis.
-- **Order Terminal**: Supports Market, Limit, and Intraday/Delivery order types.
+## Core Functionalities
 
-### Institutional Onboarding
-- **Swift Digital Entry**: Lightning-fast, paperless registration.
-- **AI-Powered KYC**: Secure, frictionless verification process.
-- **Interactive FAQ**: Comprehensive guide for new traders.
+### Market Execution
+*   **Real-Time Data Streams**: Integration with financial data providers for live NSE/BSE, commodity, and currency quotes.
+*   **Analytic Componentry**: Embedded professional charting utilities for multidimensional technical analysis.
+*   **Order Management**: Support for diverse order types including Market, Limit, and Intraday/Delivery classifications.
 
-### Advanced Modules
-- **Mutual Funds & SIPs**: Dedicated section to explore funds and calculate returns.
-- **F&O (Futures & Options)**: Trade derivatives with simulated margin requirements.
-- **IPO Dashboard**: Track listings and simulate IPO applications.
+### User Onboarding and Compliance
+*   **Digital Registration**: Automated, paperless onboarding workflow.
+*   **Verification Protocols**: Integrated KYC simulation for secure user authentication.
+*   **Knowledge Base**: Structured documentation for platform navigation and market fundamentals.
+
+### Asset Class Diversification
+*   **Investments**: Comprehensive modules for Mutual Fund exploration and Systematic Investment Plan (SIP) simulation.
+*   **Derivatives**: Dedicated F&O environment with margin requirement calculations.
+*   **Primary Markets**: IPO tracking and subscription simulation dashboard.
 
 ## Technical Architecture
 
-The project follows a modern, decoupled architecture:
-1.  **Frontend**: Built with **React 18** using **JSX**. To maintain a zero-build environment for deployment ease, it uses **Babel Standalone** for browser-side compilation.
-2.  **Backend**: A **Flask** server that acts as a secure API gateway and manages mock order execution.
+The architecture adheres to a modern, service-oriented design:
+1.  **Client Tier**: Built on React 18 using JSX syntax. Utilizes browser-side compilation via Babel for streamlined deployment synchronization.
+2.  **Server Tier**: A resilient Flask-based backend serving as the centralized gateway for data processing and order ledger management.
 
-## Project Structure
+## Project Directory Structure
 
 ```text
 Nivarya-Setu/
 ├── src/
-│   ├── app.py              # Flask API & Order Management
-│   └── platform/           # Modular Frontend
-│       ├── index.html      # Application Shell
-│       ├── style.css       # Institutional Dark Theme (CSS)
-│       └── app.jsx         # React Frontend Logic (JSX)
-├── Readme.md               # Professional Documentation
-└── requirements.txt        # Backend Dependencies
+│   ├── app.py              # Central API and Portfolio Logic
+│   └── platform/           # Modular Frontend Assets
+│       ├── index.html      # Primary Application Entry
+│       ├── style.css       # Institutional Design System (CSS)
+│       └── app.jsx         # React Logic and Componentry (JSX)
+├── Readme.md               # Project Documentation
+└── requirements.txt        # System Dependencies
 ```
 
-## Getting Started
+## Setup and Installation
 
-1.  **Install Dependencies**:
+### System Configuration
+1.  **Install Required Dependencies**:
     ```bash
     pip install -r requirements.txt
     ```
-2.  **Run Server**:
+2.  **Initialize Application Server**:
     ```bash
     python src/app.py
     ```
-3.  **Access Terminal**:
-    Visit `http://localhost:5000/` in your browser.
+3.  **Terminal Access**:
+    Navigate to `http://localhost:5000/` via a supported web browser.
 
-## Contributing
-Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for institutional guidelines.
+## Contribution and Governance
+Detailed guidelines for project contribution and pull request protocols are documented in [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Contact
-For institutional inquiries or feedback, please reach out via GitHub issues.
+## Contact Information
+For institutional inquiries, technical feedback, or reporting system anomalies, please utilize the project's issue tracking system on GitHub.
