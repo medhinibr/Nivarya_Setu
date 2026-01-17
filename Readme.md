@@ -6,70 +6,72 @@ Nivarya Setu is an institutional-grade trading simulation environment designed f
 
 The platform is engineered to facilitate financial literacy and strategy validation through a sophisticated, zero-latency simulation engine. By leveraging a decoupled architectural pattern, Nivarya Setu ensures high availability and modularity, providing users with a professional terminal experience.
 
-## Technology Stack and Language Classification
+## Comprehensive Technical Stack
 
-The project utilizes a modern full-stack architecture. For administrative transparency on version control platforms, the following language distribution is maintained:
+Nivarya Setu is built upon a resilient and modern technology stack designed for performance, security, and scalability.
 
-*   **Backend (Python/Flask)**: Manages the core simulation logic, RESTful API endpoints, and persistent user state.
-*   **Frontend (React/JSX)**: Implements complex UI components and real-time data streaming logic.
-*   **Styling (Vanilla CSS)**: Employs a bespoke institutional dark theme optimized for financial data density.
-*   **Structure (HTML5)**: Provides the semantic foundation for the application shell.
+### Frontend Development
+*   **React 18**: Used for building complex, state-driven user interfaces through functional components and hooks.
+*   **Babel Standalone**: Employed for real-time, browser-side JSX compilation to maintain a zero-build deployment workflow.
+*   **Vanilla CSS3**: Implementation of a bespoke Institutional Design System, optimized for low-latency rendering and high data density.
+*   **Typography & Iconography**: Integration of Google Fonts (Inter, Roboto Mono) and FontAwesome 6 for a refined, professional aesthetic.
 
-*Note: In repository analytics, React components are categorized under JavaScript. All frontend logic resides within `src/platform/app.jsx` using modern functional paradigms.*
+### Backend Infrastructure
+*   **Python 3.x**: The core programming language for backend operations and data processing.
+*   **Flask Framework**: Utilized for architecting a RESTful API gateway that handles client requests and portfolio logic.
+*   **YFinance**: Integration with the Yahoo Finance API for retrieving real-time market quotes and historical benchmarks.
+*   **Python-Dotenv**: Manages environment-level configurations and sensitive credentials securely.
+
+### Financial Visualization & Analytics
+*   **TradingView API**: Professional-grade charting library integrated for advanced technical analysis and real-time price action visualization.
+*   **Market Depth Simulation**: Bespoke logic for simulating Bid/Ask spreads and liquidity depth.
+
+### Authentication & Security
+*   **Firebase Authentication**: Centralized identity management system supporting secure email/password protocols.
+*   **Google OAuth 2.0**: Seamless third-party authentication integration for institutional-grade security and user convenience.
 
 ## Core Functionalities
 
 ### Market Execution
-*   **Real-Time Data Streams**: Integration with financial data providers for live NSE/BSE, commodity, and currency quotes.
-*   **Analytic Componentry**: Embedded professional charting utilities for multidimensional technical analysis.
-*   **Order Management**: Support for diverse order types including Market, Limit, and Intraday/Delivery classifications.
-
-### User Onboarding and Compliance
-*   **Digital Registration**: Automated, paperless onboarding workflow.
-*   **Verification Protocols**: Integrated KYC simulation for secure user authentication.
-*   **Knowledge Base**: Structured documentation for platform navigation and market fundamentals.
+*   **Real-Time Data Streams**: Live synchronization for NSE/BSE, commodity, and currency data.
+*   **Analytic Componentry**: Multi-timeframe technical charting and indicator support.
+*   **Order Management**: Support for Market, Limit, and Intraday/Delivery order classifications.
 
 ### Asset Class Diversification
-*   **Investments**: Comprehensive modules for Mutual Fund exploration and Systematic Investment Plan (SIP) simulation.
-*   **Derivatives**: Dedicated F&O environment with margin requirement calculations.
-*   **Primary Markets**: IPO tracking and subscription simulation dashboard.
+*   **Investments**: Modules for Mutual Fund exploration and Systematic Investment Plan (SIP) simulation.
+*   **Derivatives**: Dedicated environment for F&O trading with automated margin calculations.
+*   **Primary Markets**: Track listings and subscribe to IPO simulations through a dedicated portal.
 
-## Technical Architecture
-
-The architecture adheres to a modern, service-oriented design:
-1.  **Client Tier**: Built on React 18 using JSX syntax. Utilizes browser-side compilation via Babel for streamlined deployment synchronization.
-2.  **Server Tier**: A resilient Flask-based backend serving as the centralized gateway for data processing and order ledger management.
-
-## Project Directory Structure
+## Project Structure
 
 ```text
 Nivarya-Setu/
 ├── src/
-│   ├── app.py              # Central API and Portfolio Logic
-│   └── platform/           # Modular Frontend Assets
-│       ├── index.html      # Primary Application Entry
+│   ├── app.py              # Central Flask API and Portfolio Logic
+│   └── platform/           # Modular Frontend Architecture
+│       ├── index.html      # Application Shell
 │       ├── style.css       # Institutional Design System (CSS)
 │       └── app.jsx         # React Logic and Componentry (JSX)
-├── Readme.md               # Project Documentation
-└── requirements.txt        # System Dependencies
+├── Readme.md               # Professional Documentation
+└── requirements.txt        # System-level Dependencies
 ```
 
 ## Setup and Installation
 
-### System Configuration
-1.  **Install Required Dependencies**:
+1.  **Dependency Management**:
     ```bash
     pip install -r requirements.txt
     ```
-2.  **Initialize Application Server**:
+2.  **Configuration**:
+    Ensure a `.env` file is present in the `src/` directory with necessary API keys.
+3.  **Deployment**:
     ```bash
     python src/app.py
     ```
-3.  **Terminal Access**:
-    Navigate to `http://localhost:5000/` via a supported web browser.
+    Access the platform at `http://localhost:5000/`.
 
-## Contribution and Governance
-Detailed guidelines for project contribution and pull request protocols are documented in [CONTRIBUTING.md](CONTRIBUTING.md).
+## Governance
+Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for contribution protocols and code standards.
 
-## Contact Information
-For institutional inquiries, technical feedback, or reporting system anomalies, please utilize the project's issue tracking system on GitHub.
+## Contact
+For technical inquiries or system anomalies, please utilize the GitHub issue tracking platform.
