@@ -49,21 +49,32 @@ const LandingPage = ({ onStart }) => {
         return () => clearInterval(t);
     }, []);
 
-    const content = mode === 'TRADER' ? {
-        tag: "For Super Traders",
-        title: <>Lightning Fast <br /><span style={{ color: 'var(--blue)' }}>Futures & Options</span></>,
-        desc: "Execute trades in milliseconds with our institutional-grade terminal. Built for speed, precision, and profit.",
-        img: "assets/desktop_mockup.png",
-        color: 'var(--blue)',
-        features: ["Direct TradingView Charts", "Option Chain Analytics", "Instant Pledge Margin"]
-    } : {
-        tag: "For Long-Term Investors",
-        title: <>Build Generational <br /><span style={{ color: 'var(--green)' }}>Wealth Simpler</span></>,
-        desc: "Invest in Stocks, SIPs, IPOs, and Bonds with zero commotion. Smart layout for smarter decisions.",
-        img: "assets/hero_mockup.png", // Using hero mockup as phone mockup context
-        color: 'var(--green)',
-        features: ["0% Brokerage on Delivery", "Smart Stock Baskets", "Automated SIPs"]
-    };
+    const content = useMemo(() => {
+        if (mode === 'TRADER') return {
+            tag: "For Super Traders",
+            title: <>Lightning Fast <br /><span style={{ color: 'var(--blue)' }}>Futures & Options</span></>,
+            desc: "Execute trades in milliseconds with our institutional-grade terminal. Built for speed, precision, and profit.",
+            img: "assets/desktop_mockup.png",
+            color: 'var(--blue)',
+            features: ["Direct TradingView Charts", "Option Chain Analytics", "Instant Pledge Margin"]
+        };
+        if (mode === 'INVESTOR') return {
+            tag: "For Long-Term Investors",
+            title: <>Build Generational <br /><span style={{ color: 'var(--green)' }}>Wealth Simpler</span></>,
+            desc: "Invest in Stocks, SIPs, IPOs, and Bonds with zero commotion. Smart layout for smarter decisions.",
+            img: "assets/hero_mockup.png",
+            color: 'var(--green)',
+            features: ["0% Brokerage on Delivery", "Smart Stock Baskets", "Automated SIPs"]
+        };
+        return { // MTF
+            tag: "Margin Trading Facility",
+            title: <>Get 4x Leverage <br /><span style={{ color: '#ffb300' }}>Pay Later</span></>,
+            desc: "Don't let funds limit your potential. Buy stocks with up to 4x leverage and hold them for as long as you want.",
+            img: "assets/phone_mockup.png",
+            color: '#ffb300',
+            features: ["Lowest Interest Rates", "700+ Stocks Available", "Hold Forever"]
+        };
+    }, [mode]);
 
     return (
         <div className="landing-page">
@@ -594,7 +605,7 @@ const App = () => {
             if (r2.ok) setPortfolio(await r2.json());
         } catch (e) { }
     };
-    useEffect(() => { refresh(); const t = setInterval(refresh, 3000); return () => clearInterval(t); }, [view]);
+    useEffect(() => { window.scrollTo(0, 0); }, [view]);
 
     if (view === 'LANDING') return <LandingPage onStart={setView} />;
     if (view === 'LOGIN' || view === 'SIGNUP') return <AuthPage type={view} onAuth={handleAuth} onBack={() => setView('LANDING')} />;
