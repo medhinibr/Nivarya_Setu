@@ -39,8 +39,32 @@ const EmptyState = ({ icon, text }) => (
 );
 
 const LandingPage = ({ onStart }) => {
+    const [mode, setMode] = useState('TRADER'); // TRADER | INVESTOR
     const [mobile, setMobile] = useState('');
     const [activeFaq, setActiveFaq] = useState(null);
+
+    // Dynamic rotation to satisfy "changing landing page" requirement
+    useEffect(() => {
+        const t = setInterval(() => setMode(p => p === 'TRADER' ? 'INVESTOR' : 'TRADER'), 5000);
+        return () => clearInterval(t);
+    }, []);
+
+    const content = mode === 'TRADER' ? {
+        tag: "For Super Traders",
+        title: <>Lightning Fast <br /><span style={{ color: 'var(--blue)' }}>Futures & Options</span></>,
+        desc: "Execute trades in milliseconds with our institutional-grade terminal. Built for speed, precision, and profit.",
+        img: "assets/desktop_mockup.png",
+        color: 'var(--blue)',
+        features: ["Direct TradingView Charts", "Option Chain Analytics", "Instant Pledge Margin"]
+    } : {
+        tag: "For Long-Term Investors",
+        title: <>Build Generational <br /><span style={{ color: 'var(--green)' }}>Wealth Simpler</span></>,
+        desc: "Invest in Stocks, SIPs, IPOs, and Bonds with zero commotion. Smart layout for smarter decisions.",
+        img: "assets/hero_mockup.png", // Using hero mockup as phone mockup context
+        color: 'var(--green)',
+        features: ["0% Brokerage on Delivery", "Smart Stock Baskets", "Automated SIPs"]
+    };
+
     return (
         <div className="landing-page">
             <div className="header">
@@ -53,115 +77,116 @@ const LandingPage = ({ onStart }) => {
                 </div>
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: '15px', alignItems: 'center' }}>
                     <button className="nav-item" style={{ fontSize: '14px', fontWeight: '600' }} onClick={() => onStart('LOGIN')}>Login</button>
-                    <button className="landing-btn" style={{ padding: '10px 24px', fontSize: '13px', borderRadius: '8px' }} onClick={() => onStart('SIGNUP')}>Sign Up</button>
+                    <button className="landing-btn" style={{ padding: '10px 24px', fontSize: '13px', borderRadius: '8px', boxShadow: 'none' }} onClick={() => onStart('SIGNUP')}>Open Account</button>
                 </div>
             </div>
 
             <div className="landing-section hero-section">
-                <div className="hero-content">
-                    <div style={{ textTransform: 'uppercase', color: 'var(--blue)', fontWeight: '800', fontSize: '12px', letterSpacing: '2px', marginBottom: '24px' }}>Now live with NSE & BSE</div>
-                    <h1>Open Your <br /><span>Free Demat Account</span></h1>
-                    <p>Trade & Invest with the next generation platform built for serious wealth creators.</p>
-
-                    <div className="input-bar" style={{ display: 'flex', background: '#111', border: '1px solid var(--border)', borderRadius: '12px', padding: '8px', maxWidth: '500px', marginBottom: '32px' }}>
-                        <input type="text" placeholder="Enter mobile number" value={mobile} onChange={e => setMobile(e.target.value)} style={{ flex: 1, background: 'transparent', border: 'none', color: '#fff', padding: '0 20px', fontSize: '16px', outline: 'none' }} />
-                        <button className="landing-btn" onClick={() => onStart('SIGNUP')} style={{ padding: '12px 24px', fontSize: '14px' }}>Get Started</button>
+                <div key={mode} className="hero-content fade-in" style={{ textAlign: 'left' }}>
+                    <div className="hero-toggle">
+                        <div className={`hero-tab ${mode === 'TRADER' ? 'active' : ''}`} onClick={() => setMode('TRADER')}>Super Traders</div>
+                        <div className={`hero-tab ${mode === 'INVESTOR' ? 'active' : ''}`} onClick={() => setMode('INVESTOR')}>Investors</div>
+                        <div className={`hero-tab ${mode === 'MTF' ? 'active' : ''}`} onClick={() => setMode('MTF')}>MTF</div>
                     </div>
+                    
+                    <div style={{ textTransform: 'uppercase', color: content.color, fontWeight: '800', fontSize: '12px', letterSpacing: '2px', marginBottom: '24px' }}>{content.tag}</div>
+                    <h1 style={{fontSize: '72px'}}>{content.title}</h1>
+                    <p style={{ maxWidth: '500px', margin: '0 0 40px 0', textAlign: 'left', fontSize: '18px' }}>{content.desc}</p>
 
-                    <div style={{ display: 'flex', gap: '20px' }}>
-                        <div className="promo-badge" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', padding: '16px 24px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '15px' }}>
-                            <div style={{ fontSize: '24px', fontWeight: '800', color: 'var(--blue)' }}>₹0</div>
-                            <div style={{ fontSize: '11px', color: 'var(--text-light)', lineHeight: '1.4' }}>A/c Opening, AMC<br />& Mutual Funds</div>
-                        </div>
-                        <div className="promo-badge" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', padding: '16px 24px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '15px' }}>
-                            <div style={{ fontSize: '24px', fontWeight: '800', color: 'var(--blue)' }}>₹20</div>
-                            <div style={{ fontSize: '11px', color: 'var(--text-light)', lineHeight: '1.4' }}>Per order on Equity<br />Intraday, F&O</div>
-                        </div>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 48px 0', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        {content.features.map((f, i) => (
+                            <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '16px', fontWeight: '500' }}>
+                                <i className="fas fa-check-circle" style={{ color: content.color }}></i> {f}
+                            </li>
+                        ))}
+                    </ul>
+
+                    <div className="input-bar" style={{ margin: '0 0 32px 0' }}>
+                        <input type="text" placeholder="Enter mobile number" value={mobile} onChange={e => setMobile(e.target.value)} />
+                        <button className="landing-btn" onClick={() => onStart('SIGNUP')} style={{ background: content.color }}>Get Started</button>
                     </div>
                 </div>
                 <div className="hero-visual">
-                    <img src="assets/hero_mockup.png" className="hero-img" alt="Platform Mockup" />
-                </div>
-            </div>
-
-            <div className="landing-section" style={{ background: '#050505' }}>
-                <div style={{ textAlign: 'center', marginBottom: '60px' }}>
-                    <h2 style={{ fontSize: '42px', fontWeight: '800' }}>Leverage with <span style={{ color: 'var(--blue)' }}>MTF</span></h2>
-                    <p style={{ color: 'var(--text-light)', marginTop: '16px' }}>Interest rates for margin trading slashed to just 0.03% per day!</p>
-                </div>
-
-                <table className="comparison-table">
-                    <thead>
-                        <tr><th>Feature</th><th>Standard trading</th><th className="col-highlight">With Nivarya MTF</th></tr>
-                    </thead>
-                    <tbody>
-                        <tr><td>Equity Quantity</td><td>100 Shares</td><td className="col-highlight">400 Shares</td></tr>
-                        <tr><td>Required Capital</td><td>₹1,00,000</td><td className="col-highlight">₹25,000</td></tr>
-                        <tr><td>Interest Rate</td><td>N/A</td><td className="col-highlight">0.03% / day</td></tr>
-                        <tr><td>Leverage</td><td>1x</td><td className="col-highlight">4x Leverage</td></tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <div className="landing-section">
-                <div style={{ textAlign: 'center', marginBottom: '60px' }}>
-                    <h2 style={{ fontSize: '42px', fontWeight: '800' }}>Investment <span style={{ color: 'var(--blue)' }}>Solutions</span></h2>
-                </div>
-                <div className="step-grid">
-                    <div className="step-card">
-                        <i className="fas fa-bolt" style={{ fontSize: '24px', color: 'var(--blue)', marginBottom: '20px' }}></i>
-                        <h3 style={{ fontSize: '20px', marginBottom: '12px' }}>Swift Digital Entry</h3>
-                        <p style={{ fontSize: '14px', color: 'var(--text-light)' }}>Paperless registration in under 60 seconds.</p>
-                        <div className="step-num">1</div>
-                    </div>
-                    <div className="step-card">
-                        <i className="fas fa-shield-alt" style={{ fontSize: '24px', color: 'var(--blue)', marginBottom: '20px' }}></i>
-                        <h3 style={{ fontSize: '20px', marginBottom: '12px' }}>AI-Powered KYC</h3>
-                        <p style={{ fontSize: '14px', color: 'var(--text-light)' }}>Secure, frictionless verification process.</p>
-                        <div className="step-num">2</div>
-                    </div>
-                    <div className="step-card">
-                        <i className="fas fa-chart-line" style={{ fontSize: '24px', color: 'var(--blue)', marginBottom: '20px' }}></i>
-                        <h3 style={{ fontSize: '20px', marginBottom: '12px' }}>Activate Vision</h3>
-                        <p style={{ fontSize: '14px', color: 'var(--text-light)' }}>Start building your portfolio instantly.</p>
-                        <div className="step-num">3</div>
+                    <div style={{position: 'relative'}}>
+                         <img key={mode} src={content.img} className="hero-img fade-in" alt="Platform Mockup" style={{ maxHeight: '600px', objectFit: 'contain' }} />
+                         <div style={{ position: 'absolute', bottom: -40, right: -40, background: 'rgba(20,20,20,0.9)', padding: '24px', borderRadius: '16px', border: '1px solid var(--border)', backdropFilter: 'blur(10px)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
+                             <div style={{ fontSize: '12px', color: 'var(--text-light)', marginBottom: '8px' }}>Active Users</div>
+                             <div style={{ fontSize: '32px', fontWeight: '800', color: '#fff' }}>1.2M+</div>
+                             <div style={{ display: 'flex', gap: '4px', marginTop: '8px' }}>
+                                 {[1,2,3,4,5].map(i => <i key={i} className="fas fa-star" style={{ color: '#ffb300', fontSize: '12px' }}></i>)}
+                             </div>
+                         </div>
                     </div>
                 </div>
             </div>
 
-            <div className="landing-section" style={{ background: '#050505', borderTop: '1px solid var(--border)' }}>
-                <div style={{ textAlign: 'center', marginBottom: '60px' }}>
-                    <h2 style={{ fontSize: '42px', fontWeight: '800' }}>General <span style={{ color: 'var(--blue)' }}>FAQ</span></h2>
-                </div>
-                <div className="faq-container">
-                    {[
-                        { q: "What is a Demat Account?", a: "A Demat account holds your shares and securities in electronic format." },
-                        { q: "Benefits of Nivarya Setu?", a: "Institutional-grade tools, zero opening charges, and integrated TradingView charts." },
-                        { q: "What are the charges?", a: "₹0 for Delivery and flat ₹20 for Intraday/F&O." }
-                    ].map((faq, idx) => (
-                        <div key={idx} className={`faq-item ${activeFaq === idx ? 'active' : ''}`}>
-                            <div className="faq-header" onClick={() => setActiveFaq(activeFaq === idx ? null : idx)}>
-                                <span style={{ fontWeight: '600' }}>{faq.q}</span>
-                                <i className="fas fa-chevron-down"></i>
-                            </div>
-                            <div className="faq-answer">{faq.a}</div>
+            <div className="landing-section" style={{ background: '#050608' }}>
+                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '60px' }}>
+                     <div>
+                         <h2 style={{ fontSize: '42px', fontWeight: '800', marginBottom: '16px' }}>Technology <span style={{ color: 'var(--blue)' }}>First</span></h2>
+                         <p style={{ color: 'var(--text-light)', maxWidth: '500px' }}>We don't just provide a platform; we provide an edge. Engineered for those who refuse to settle for lag.</p>
+                     </div>
+                     <button className="nav-item">View All Features <i className="fas fa-arrow-right" style={{ marginLeft: '8px' }}></i></button>
+                 </div>
+
+                 <div className="stock-list" style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', overflow: 'visible'}}>
+                     {[
+                         { icon: 'fa-bolt', title: 'Flash Trade', desc: 'Buy/Sell options in a single click from the chart.' },
+                         { icon: 'fa-wifi', title: 'Nivarya WiFi', desc: 'Sync your mobile and web charts instantly.' },
+                         { icon: 'fa-layer-group', title: 'Basket Orders', desc: 'Execute multi-leg strategies in one go.' },
+                         { icon: 'fa-chart-pie', title: 'Portfolio Analytics', desc: 'Deep dive into your P&L with X-ray vision.' },
+                         { icon: 'fa-robot', title: 'Algo Ready', desc: 'Connect your Python strategies via free API.' },
+                         { icon: 'fa-shield-alt', title: 'Secure & Safe', desc: '2FA protection and bank-grade encryption.' }
+                     ].map((item, idx) => (
+                         <div key={idx} className="feature-card">
+                             <div style={{ width: '50px', height: '50px', borderRadius: '12px', background: 'rgba(55, 125, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
+                                 <i className={`fas ${item.icon}`} style={{ fontSize: '20px', color: 'var(--blue)' }}></i>
+                             </div>
+                             <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '12px' }}>{item.title}</h3>
+                             <p style={{ color: 'var(--text-light)', lineHeight: '1.6' }}>{item.desc}</p>
+                         </div>
+                     ))}
+                 </div>
+            </div>
+
+            <div className="landing-section" style={{ paddingTop: '100px', paddingBottom: '140px' }}>
+                <div style={{ display: 'flex', gap: '80px', alignItems: 'center' }}>
+                    <div style={{ flex: 1 }}>
+                        <img src="assets/phone_mockup.png" style={{ width: '100%', borderRadius: '30px', boxShadow: '0 40px 80px rgba(0,0,0,0.5)' }} alt="Mobile App" />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                        <div style={{ textTransform: 'uppercase', color: 'var(--green)', fontWeight: '800', fontSize: '12px', letterSpacing: '2px', marginBottom: '24px' }}>On The Go</div>
+                        <h2 style={{ fontSize: '48px', fontWeight: '900', marginBottom: '24px', lineHeight: '1.1' }}>Trade Everywhere.<br />Miss Nothing.</h2>
+                        <p style={{ color: 'var(--text-light)', fontSize: '18px', lineHeight: '1.6', marginBottom: '40px' }}>
+                            The Nivarya Setu mobile app brings the full power of the desktop terminal to your pocket. Option chain, GTT orders, and instant pledging—all just a tap away.
+                        </p>
+                        <div style={{ display: 'flex', gap: '20px' }}>
+                             <button className="landing-btn" style={{ background: '#fff', color: '#000', padding: '16px 32px' }}><i className="fab fa-apple"></i> iOS App</button>
+                             <button className="landing-btn" style={{ background: 'transparent', border: '1px solid var(--border)', padding: '16px 32px' }}><i className="fab fa-google-play"></i> Android App</button>
                         </div>
-                    ))}
+                    </div>
                 </div>
             </div>
 
             <div className="landing-section" style={{ borderTop: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px', marginBottom: '40px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '32px', marginBottom: '40px', justifyContent: 'center' }}>
                     {['PRIVACY', 'TERMS', 'RISK', 'REFUND'].map(type => (
-                        <span key={type} onClick={() => onStart(type)} style={{ fontSize: '12px', color: 'var(--text-light)', cursor: 'pointer', fontWeight: '600' }}>
-                            {type.charAt(0) + type.slice(1).toLowerCase()} Policy
+                        <span key={type} onClick={() => onStart(type)} style={{ fontSize: '13px', color: 'var(--text-light)', cursor: 'pointer', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            {type === 'PRIVACY' ? 'Privacy Policy' : type === 'TERMS' ? 'Terms & Conditions' : type === 'RISK' ? 'Risk Disclosure' : 'Refund Policy'}
                         </span>
                     ))}
                 </div>
-                <div className="disclosure-text" style={{ fontSize: '11px', color: 'var(--text-light)', opacity: 0.5 }}>
-                    © 2026 Nivarya Setu Financial Services. All rights reserved. <br /><br />
-                    Investments in the securities market are subject to market risks. Read all the related documents carefully before investing.
+                <div className="disclosure-text" style={{ fontSize: '12px', color: 'var(--text-light)', opacity: 0.5, textAlign: 'center', maxWidth: '800px', margin: '0 auto', lineHeight: '1.6' }}>
+                    © 2026 Nivarya Setu Financial Services. All rights reserved. <br />
+                    Investments in the securities market are subject to market risks. Read all the related documents carefully before investing. Brokerage will not exceed the SEBI prescribed limit.
                 </div>
+            </div>
+
+            <div className="sticky-footer-bar">
+                 <div style={{ fontSize: '14px', fontWeight: '700' }}>Open Demat Account <span style={{ color: 'var(--green)' }}>FREE</span></div>
+                 <div style={{ width: '1px', height: '20px', background: 'var(--border)' }}></div>
+                 <div style={{ fontSize: '13px', color: 'var(--text-light)' }}>Join 1.2M+ Users</div>
+                 <button className="landing-btn" style={{ padding: '8px 24px', fontSize: '13px', height: 'auto', borderRadius: '100px' }} onClick={() => onStart('SIGNUP')}>Start Now</button>
             </div>
         </div>
     );
