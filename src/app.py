@@ -676,5 +676,16 @@ def square_off():
             return jsonify({"status": "success"})
     return jsonify({"status": "error", "message": "Position not found"})
 
+@app.route('/test-db', methods=['GET'])
+def test_db():
+    if not supabase:
+        return jsonify({"status": "error", "message": "Supabase client is not initialized. Check your environment variables."})
+    try:
+        response = supabase.table('users').select('*').execute()
+        return jsonify({"status": "success", "data": response.data})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
+
