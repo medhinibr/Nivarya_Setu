@@ -4,6 +4,10 @@ from datetime import datetime
 import threading
 import time
 import os
+import urllib.request
+import json
+import yfinance as yf
+import pandas as pd
 
 # Load .env manually from current directory
 env_path = os.path.join(os.path.dirname(__file__), '.env')
@@ -14,6 +18,102 @@ try:
                 k, v = line.strip().split('=', 1)
                 os.environ[k] = v.strip().strip('"') # Handle quotes if present
 except: pass
+
+YF_MAP = {
+    'RELIANCE.NS': 'RELIANCE.NS',
+    'TCS.NS': 'TCS.NS',
+    'HDFCBANK.NS': 'HDFCBANK.NS',
+    'INFY.NS': 'INFY.NS',
+    'SBIN.NS': 'SBIN.NS',
+    'TATAMOTORS.NS': 'TATAMOTORS.NS',
+    'ITC.NS': 'ITC.NS',
+    'ICICIBANK.NS': 'ICICIBANK.NS',
+    'NIFTY 25OCT FUT': '^NSEI',
+    'BANKNIFTY 25OCT FUT': '^NSEBANK',
+    'GOLD 05OCT FUT': 'GC=F',
+    'USDINR 27SEP FUT': 'INR=X',
+    'EURINR 27SEP FUT': 'EURINR=X',
+    'GBPINR 27SEP FUT': 'GBPINR=X'
+}
+
+class QuoteCache:
+    def __init__(self, ttl_seconds=15):
+        self.ttl = ttl_seconds
+        self.cache = {} # maps symbol -> {price, change, timestamp}
+        self.lock = threading.Lock()
+
+    def get_quotes(self, symbols):
+        with self.lock:
+            now = time.time()
+            missing_or_expired = []
+            for sym in symbols:
+                if not sym:
+                    continue
+                if sym not in self.cache or (now - self.cache[sym]['timestamp']) > self.ttl:
+                    missing_or_expired.append(sym)
+            
+            if missing_or_expired:
+                # Map simulation symbols to yFinance tickers
+                yf_symbols = []
+                symbol_map = {}
+                for sym in missing_or_expired:
+                    yf_sym = YF_MAP.get(sym, sym)
+                    yf_symbols.append(yf_sym)
+                    symbol_map[yf_sym] = sym
+                
+                try:
+                    # Download 2 days of data to compute percent change
+                    data = yf.download(yf_symbols, period="2d", group_by='ticker', progress=False)
+                    
+                    for yf_sym in yf_symbols:
+                        sym = symbol_map[yf_sym]
+                        ticker_df = None
+                        
+                        if isinstance(data.columns, pd.MultiIndex):
+                            if yf_sym in data.columns.levels[0]:
+                                ticker_df = data[yf_sym].dropna()
+                        else:
+                            ticker_df = data.dropna()
+                        
+                        if ticker_df is not None and not ticker_df.empty:
+                            last_row = ticker_df.iloc[-1]
+                            price = float(last_row['Close'])
+                            if len(ticker_df) >= 2:
+                                prev_close = float(ticker_df.iloc[-2]['Close'])
+                            else:
+                                prev_close = float(last_row.get('Open', price))
+                            
+                            change = ((price - prev_close) / prev_close) * 100 if prev_close != 0 else 0.0
+                            self.cache[sym] = {
+                                "price": round(price, 2),
+                                "change": round(change, 2),
+                                "timestamp": now
+                            }
+                        else:
+                            # Fallback if ticker not found or empty
+                            if sym not in self.cache:
+                                base = mock_defaults.get(sym, 500.0)
+                                self.cache[sym] = {
+                                    "price": base,
+                                    "change": 0.0,
+                                    "timestamp": now
+                                }
+                except Exception as e:
+                    print(f"Error fetching quotes from Yahoo Finance: {e}")
+                    # Set temporary fallback values so we don't crash
+                    for sym in missing_or_expired:
+                        if sym not in self.cache:
+                            base = mock_defaults.get(sym, 500.0)
+                            self.cache[sym] = {
+                                "price": base,
+                                "change": 0.0,
+                                "timestamp": now
+                            }
+            
+            return {sym: {"price": self.cache[sym]['price'], "change": self.cache[sym]['change']} for sym in symbols if sym in self.cache}
+
+quote_cache = QuoteCache(ttl_seconds=15)
+
 
 app = Flask(__name__, static_folder='platform', static_url_path='')
 
@@ -254,19 +354,30 @@ def generate_key():
 
 @app.route('/api/batch_quotes')
 def get_batch_quotes():
-    symbols = request.args.get('symbols', '').split(',')
-    response_map = {}
+    symbols = [s for s in request.args.get('symbols', '').split(',') if s]
+    quotes = quote_cache.get_quotes(symbols)
     
+    response_map = {}
     for sym in symbols:
-        base = mock_defaults.get(sym, 500.0)
-        change_pct = random.uniform(-1.5, 1.5)
-        curr = base * (1 + change_pct/100)
-        response_map[sym] = {"price": round(curr, 2), "change": round(change_pct, 2)}
+        if sym in quotes:
+            response_map[sym] = {
+                "price": quotes[sym]['price'],
+                "change": quotes[sym]['change']
+            }
+        else:
+            base = mock_defaults.get(sym, 500.0)
+            response_map[sym] = {"price": base, "change": 0.0}
 
-    # Add indices
+    # Add indices (Nifty 50 and Bank Nifty)
+    index_quotes = quote_cache.get_quotes(['NIFTY 25OCT FUT', 'BANKNIFTY 25OCT FUT'])
+    nifty_price = index_quotes.get('NIFTY 25OCT FUT', {}).get('price', 19500.0)
+    nifty_chg = index_quotes.get('NIFTY 25OCT FUT', {}).get('change', 0.0)
+    bank_price = index_quotes.get('BANKNIFTY 25OCT FUT', {}).get('price', 44000.0)
+    bank_chg = index_quotes.get('BANKNIFTY 25OCT FUT', {}).get('change', 0.0)
+    
     response_map['indices'] = {
-        "NIFTY": {"price": round(19500 + random.uniform(-10, 10), 2), "chg": round(0.5 + random.uniform(-0.1, 0.1), 2)},
-        "BANKNIFTY": {"price": round(44000 + random.uniform(-30, 30), 2), "chg": round(0.4 + random.uniform(-0.1, 0.1), 2)}
+        "NIFTY": {"price": nifty_price, "chg": nifty_chg},
+        "BANKNIFTY": {"price": bank_price, "chg": bank_chg}
     }
 
     return jsonify(response_map)
@@ -285,8 +396,8 @@ def get_mock_depth(price):
 @app.route('/api/market_depth')
 def market_depth_api():
     sym = request.args.get('symbol', 'RELIANCE.NS')
-    base = mock_defaults.get(sym, 2500) 
-    curr = base + random.uniform(-2, 2)
+    quotes = quote_cache.get_quotes([sym])
+    curr = quotes.get(sym, {}).get('price', mock_defaults.get(sym, 2500.0))
     return jsonify(get_mock_depth(curr))
 
 @app.route('/api/funds/history')
@@ -297,31 +408,34 @@ def get_funds_history():
 def get_portfolio():
     total_val = PAPER_STATE['funds']
     
+    # Collect all symbols we need to fetch quotes for
+    holding_syms = [h['symbol'] for h in PAPER_STATE['holdings']]
+    position_syms = list(PAPER_STATE['positions'].keys())
+    all_syms = list(set(holding_syms + position_syms))
+    
+    quotes = quote_cache.get_quotes(all_syms) if all_syms else {}
+    
     # 1. Update Holdings
     for h in PAPER_STATE['holdings']:
-        mock_price = h['avg']
-        if h['symbol'] in mock_defaults:
-             mock_price = mock_defaults[h['symbol']] + (random.uniform(-1, 1) * (mock_defaults[h['symbol']]/100))
-        h['ltp'] = round(mock_price, 2)
+        sym = h['symbol']
+        current_price = quotes.get(sym, {}).get('price', h['avg'])
+        h['ltp'] = round(current_price, 2)
         h['value'] = round(h['ltp'] * h['qty'], 2)
         h['pnl'] = round(h['value'] - (h['avg'] * h['qty']), 2)
-        h['pnl_pct'] = round((h['pnl'] / (h['avg'] * h['qty'])) * 100, 2)
+        h['pnl_pct'] = round((h['pnl'] / (h['avg'] * h['qty'])) * 100, 2) if h['avg'] != 0 else 0.0
         total_val += h['value']
 
     # 2. Update Intraday Positions
     pos_list = []
     total_pnl = 0
     for sym, pos in PAPER_STATE['positions'].items():
-        base = mock_defaults.get(sym, 1000)
-        curr = base + (random.uniform(-0.5, 0.5) * base / 100)
-        
-        # MTM
-        mtm = (curr - pos['avg']) * pos['qty']
-        
         if pos['qty'] != 0:
+            current_price = quotes.get(sym, {}).get('price', pos['avg'])
+            # MTM
+            mtm = (current_price - pos['avg']) * pos['qty']
             pos_entry = {
                 "symbol": sym, "qty": pos['qty'], "avg": pos['avg'], 
-                "ltp": round(curr, 2), "pnl": round(mtm, 2), "product": "MIS"
+                "ltp": round(current_price, 2), "pnl": round(mtm, 2), "product": "MIS"
             }
             pos_list.append(pos_entry)
             total_pnl += mtm
@@ -334,6 +448,37 @@ def get_portfolio():
         "total_value": round(total_val, 2),
         "total_pnl": round(total_pnl + sum(h['pnl'] for h in PAPER_STATE['holdings']), 2)
     })
+
+@app.route('/api/search')
+def search_tickers():
+    import urllib.parse
+    query = request.args.get('q', '')
+    if not query:
+        return jsonify([])
+    
+    url = f"https://query2.finance.yahoo.com/v1/finance/search?q={urllib.parse.quote(query)}&newsCount=0"
+    req = urllib.request.Request(
+        url, 
+        headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+    )
+    try:
+        with urllib.request.urlopen(req) as response:
+            data = json.loads(response.read().decode())
+            quotes = data.get('quotes', [])
+            results = []
+            for q in quotes:
+                quote_type = q.get('quoteType')
+                if quote_type in ['EQUITY', 'ETF', 'INDEX', 'MUTUALFUND']:
+                    results.append({
+                        "symbol": q.get('symbol'),
+                        "name": q.get('shortname') or q.get('longname') or q.get('symbol'),
+                        "exchange": q.get('exchange')
+                    })
+            return jsonify(results[:8])
+    except Exception as e:
+        print("Search API error:", e)
+        return jsonify([])
+
 
 @app.route('/api/add_funds', methods=['POST'])
 def add_funds():

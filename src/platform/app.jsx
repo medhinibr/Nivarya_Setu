@@ -39,45 +39,10 @@ const EmptyState = ({ icon, text }) => (
 );
 
 const LandingPage = ({ onStart }) => {
-    const [mode, setMode] = useState('TRADER'); // TRADER | INVESTOR
     const [mobile, setMobile] = useState('');
     const [activeFaq, setActiveFaq] = useState(null);
-
-    // Dynamic rotation to satisfy "changing landing page" requirement
-    useEffect(() => {
-        const t = setInterval(() => setMode(p => p === 'TRADER' ? 'INVESTOR' : 'TRADER'), 5000);
-        return () => clearInterval(t);
-    }, []);
-
-    const content = useMemo(() => {
-        if (mode === 'TRADER') return {
-            tag: "For Super Traders",
-            title: <>Lightning Fast <br /><span style={{ color: 'var(--blue)' }}>Futures & Options</span></>,
-            desc: "Execute trades in milliseconds with our institutional-grade terminal. Built for speed, precision, and profit.",
-            img: "assets/desktop_mockup.png",
-            color: 'var(--blue)',
-            features: ["Direct TradingView Charts", "Option Chain Analytics", "Instant Pledge Margin"]
-        };
-        if (mode === 'INVESTOR') return {
-            tag: "For Long-Term Investors",
-            title: <>Build Generational <br /><span style={{ color: 'var(--green)' }}>Wealth Simpler</span></>,
-            desc: "Invest in Stocks, SIPs, IPOs, and Bonds with zero commotion. Smart layout for smarter decisions.",
-            img: "assets/hero_mockup.png",
-            color: 'var(--green)',
-            features: ["0% Brokerage on Delivery", "Smart Stock Baskets", "Automated SIPs"]
-        };
-        return { // MTF
-            tag: "Margin Trading Facility",
-            title: <>Get 4x Leverage <br /><span style={{ color: '#ffb300' }}>Pay Later</span></>,
-            desc: "Don't let funds limit your potential. Buy stocks with up to 4x leverage and hold them for as long as you want.",
-            img: "assets/phone_mockup.png",
-            color: '#ffb300',
-            features: ["Lowest Interest Rates", "700+ Stocks Available", "Hold Forever"]
-        };
-    }, [mode]);
-
     return (
-        <div className="landing-page" style={{ height: '100vh', overflowY: 'auto', overflowX: 'hidden' }}>
+        <div className="landing-page">
             <div className="header">
                 <div className="logo" onClick={() => onStart('LANDING')}>
                     <i className="fas fa-landmark"></i>
@@ -88,120 +53,115 @@ const LandingPage = ({ onStart }) => {
                 </div>
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: '15px', alignItems: 'center' }}>
                     <button className="nav-item" style={{ fontSize: '14px', fontWeight: '600' }} onClick={() => onStart('LOGIN')}>Login</button>
-                    <button className="landing-btn" style={{ padding: '10px 24px', fontSize: '13px', borderRadius: '8px', boxShadow: 'none' }} onClick={() => onStart('SIGNUP')}>Open Account</button>
+                    <button className="landing-btn" style={{ padding: '10px 24px', fontSize: '13px', borderRadius: '8px' }} onClick={() => onStart('SIGNUP')}>Sign Up</button>
                 </div>
             </div>
 
             <div className="landing-section hero-section">
-                <div key={mode} className="hero-content fade-in" style={{ textAlign: 'left' }}>
-                    <div className="hero-toggle">
-                        <div className={`hero-tab ${mode === 'TRADER' ? 'active' : ''}`} onClick={() => setMode('TRADER')}>Super Traders</div>
-                        <div className={`hero-tab ${mode === 'INVESTOR' ? 'active' : ''}`} onClick={() => setMode('INVESTOR')}>Investors</div>
-                        <div className={`hero-tab ${mode === 'MTF' ? 'active' : ''}`} onClick={() => setMode('MTF')}>MTF</div>
+                <div className="hero-content">
+                    <div style={{ textTransform: 'uppercase', color: 'var(--blue)', fontWeight: '800', fontSize: '12px', letterSpacing: '2px', marginBottom: '24px' }}>Now live with NSE & BSE</div>
+                    <h1>Open Your <br /><span>Free Demat Account</span></h1>
+                    <p>Trade & Invest with the next generation platform built for serious wealth creators.</p>
+
+                    <div className="input-bar" style={{ display: 'flex', background: '#111', border: '1px solid var(--border)', borderRadius: '12px', padding: '8px', maxWidth: '500px', marginBottom: '32px' }}>
+                        <input type="text" placeholder="Enter mobile number" value={mobile} onChange={e => setMobile(e.target.value)} style={{ flex: 1, background: 'transparent', border: 'none', color: '#fff', padding: '0 20px', fontSize: '16px', outline: 'none' }} />
+                        <button className="landing-btn" onClick={() => onStart('SIGNUP')} style={{ padding: '12px 24px', fontSize: '14px' }}>Get Started</button>
                     </div>
 
-                    <div style={{ textTransform: 'uppercase', color: content.color, fontWeight: '800', fontSize: '12px', letterSpacing: '2px', marginBottom: '24px' }}>{content.tag}</div>
-                    <h1 style={{ fontSize: '72px' }}>{content.title}</h1>
-                    <p style={{ maxWidth: '500px', margin: '0 0 40px 0', textAlign: 'left', fontSize: '18px' }}>{content.desc}</p>
-
-                    <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 48px 0', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                        {content.features.map((f, i) => (
-                            <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '16px', fontWeight: '500' }}>
-                                <i className="fas fa-check-circle" style={{ color: content.color }}></i> {f}
-                            </li>
-                        ))}
-                    </ul>
-
-                    <div className="input-bar" style={{ margin: '0 0 32px 0' }}>
-                        <input type="text" placeholder="Enter mobile number" value={mobile} onChange={e => setMobile(e.target.value)} />
-                        <button className="landing-btn" onClick={() => onStart('SIGNUP')} style={{ background: content.color }}>Get Started</button>
+                    <div style={{ display: 'flex', gap: '20px' }}>
+                        <div className="promo-badge" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', padding: '16px 24px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                            <div style={{ fontSize: '24px', fontWeight: '800', color: 'var(--blue)' }}>₹0</div>
+                            <div style={{ fontSize: '11px', color: 'var(--text-light)', lineHeight: '1.4' }}>A/c Opening, AMC<br />& Mutual Funds</div>
+                        </div>
+                        <div className="promo-badge" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', padding: '16px 24px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                            <div style={{ fontSize: '24px', fontWeight: '800', color: 'var(--blue)' }}>₹20</div>
+                            <div style={{ fontSize: '11px', color: 'var(--text-light)', lineHeight: '1.4' }}>Per order on Equity<br />Intraday, F&O</div>
+                        </div>
                     </div>
                 </div>
                 <div className="hero-visual">
-                    <div style={{ position: 'relative' }}>
-                        <img key={mode} src={content.img} className="hero-img fade-in" alt="Platform Mockup" style={{ maxHeight: '600px', objectFit: 'contain' }} />
-                        <div style={{ position: 'absolute', bottom: -40, right: -40, background: 'rgba(20,20,20,0.9)', padding: '24px', borderRadius: '16px', border: '1px solid var(--border)', backdropFilter: 'blur(10px)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
-                            <div style={{ fontSize: '12px', color: 'var(--text-light)', marginBottom: '8px' }}>Market Status</div>
-                            <div style={{ fontSize: '24px', fontWeight: '800', color: 'var(--green)' }}>Live & Active</div>
-                            <div style={{ display: 'flex', gap: '8px', marginTop: '8px', alignItems: 'center' }}>
-                                <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--green)' }}></div>
-                                <span style={{ fontSize: '12px', color: '#fff' }}>NSE & BSE Connected</span>
-                            </div>
-                        </div>
+                    <img src="assets/hero_mockup.png" className="hero-img" alt="Platform Mockup" />
+                </div>
+            </div>
+
+            <div className="landing-section" style={{ background: '#050505' }}>
+                <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+                    <h2 style={{ fontSize: '42px', fontWeight: '800' }}>Leverage with <span style={{ color: 'var(--blue)' }}>MTF</span></h2>
+                    <p style={{ color: 'var(--text-light)', marginTop: '16px' }}>Interest rates for margin trading slashed to just 0.03% per day!</p>
+                </div>
+
+                <table className="comparison-table">
+                    <thead>
+                        <tr><th>Feature</th><th>Standard trading</th><th className="col-highlight">With Nivarya MTF</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Equity Quantity</td><td>100 Shares</td><td className="col-highlight">400 Shares</td></tr>
+                        <tr><td>Required Capital</td><td>₹1,00,000</td><td className="col-highlight">₹25,000</td></tr>
+                        <tr><td>Interest Rate</td><td>N/A</td><td className="col-highlight">0.03% / day</td></tr>
+                        <tr><td>Leverage</td><td>1x</td><td className="col-highlight">4x Leverage</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div className="landing-section">
+                <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+                    <h2 style={{ fontSize: '42px', fontWeight: '800' }}>Investment <span style={{ color: 'var(--blue)' }}>Solutions</span></h2>
+                </div>
+                <div className="step-grid">
+                    <div className="step-card">
+                        <i className="fas fa-bolt" style={{ fontSize: '24px', color: 'var(--blue)', marginBottom: '20px' }}></i>
+                        <h3 style={{ fontSize: '20px', marginBottom: '12px' }}>Swift Digital Entry</h3>
+                        <p style={{ fontSize: '14px', color: 'var(--text-light)' }}>Paperless registration in under 60 seconds.</p>
+                        <div className="step-num">1</div>
+                    </div>
+                    <div className="step-card">
+                        <i className="fas fa-shield-alt" style={{ fontSize: '24px', color: 'var(--blue)', marginBottom: '20px' }}></i>
+                        <h3 style={{ fontSize: '20px', marginBottom: '12px' }}>AI-Powered KYC</h3>
+                        <p style={{ fontSize: '14px', color: 'var(--text-light)' }}>Secure, frictionless verification process.</p>
+                        <div className="step-num">2</div>
+                    </div>
+                    <div className="step-card">
+                        <i className="fas fa-chart-line" style={{ fontSize: '24px', color: 'var(--blue)', marginBottom: '20px' }}></i>
+                        <h3 style={{ fontSize: '20px', marginBottom: '12px' }}>Activate Vision</h3>
+                        <p style={{ fontSize: '14px', color: 'var(--text-light)' }}>Start building your portfolio instantly.</p>
+                        <div className="step-num">3</div>
                     </div>
                 </div>
             </div>
 
-            <div className="landing-section" style={{ background: '#050608' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '60px' }}>
-                    <div>
-                        <h2 style={{ fontSize: '42px', fontWeight: '800', marginBottom: '16px' }}>Technology <span style={{ color: 'var(--blue)' }}>First</span></h2>
-                        <p style={{ color: 'var(--text-light)', maxWidth: '500px' }}>We don't just provide a platform; we provide an edge. Engineered for those who refuse to settle for lag.</p>
-                    </div>
-                    <button className="nav-item" onClick={() => onStart('SIGNUP')}>Create Account <i className="fas fa-arrow-right" style={{ marginLeft: '8px' }}></i></button>
+            <div className="landing-section" style={{ background: '#050505', borderTop: '1px solid var(--border)' }}>
+                <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+                    <h2 style={{ fontSize: '42px', fontWeight: '800' }}>General <span style={{ color: 'var(--blue)' }}>FAQ</span></h2>
                 </div>
-
-                <div className="stock-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', overflow: 'visible' }}>
+                <div className="faq-container">
                     {[
-                        { icon: 'fa-bolt', title: 'Flash Trade', desc: 'Buy/Sell options in a single click from the chart.' },
-                        { icon: 'fa-wifi', title: 'Nivarya WiFi', desc: 'Sync your mobile and web charts instantly.' },
-                        { icon: 'fa-layer-group', title: 'Basket Orders', desc: 'Execute multi-leg strategies in one go.' },
-                        { icon: 'fa-chart-pie', title: 'Portfolio Analytics', desc: 'Deep dive into your P&L with X-ray vision.' },
-                        { icon: 'fa-robot', title: 'Algo Ready', desc: 'Connect your Python strategies via free API.' },
-                        { icon: 'fa-shield-alt', title: 'Secure & Safe', desc: '2FA protection and bank-grade encryption.' }
-                    ].map((item, idx) => (
-                        <div key={idx} className="feature-card">
-                            <div style={{ width: '50px', height: '50px', borderRadius: '12px', background: 'rgba(55, 125, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
-                                <i className={`fas ${item.icon}`} style={{ fontSize: '20px', color: 'var(--blue)' }}></i>
+                        { q: "What is a Demat Account?", a: "A Demat account holds your shares and securities in electronic format." },
+                        { q: "Benefits of Nivarya Setu?", a: "Institutional-grade tools, zero opening charges, and integrated TradingView charts." },
+                        { q: "What are the charges?", a: "₹0 for Delivery and flat ₹20 for Intraday/F&O." }
+                    ].map((faq, idx) => (
+                        <div key={idx} className={`faq-item ${activeFaq === idx ? 'active' : ''}`}>
+                            <div className="faq-header" onClick={() => setActiveFaq(activeFaq === idx ? null : idx)}>
+                                <span style={{ fontWeight: '600' }}>{faq.q}</span>
+                                <i className="fas fa-chevron-down"></i>
                             </div>
-                            <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '12px' }}>{item.title}</h3>
-                            <p style={{ color: 'var(--text-light)', lineHeight: '1.6' }}>{item.desc}</p>
+                            <div className="faq-answer">{faq.a}</div>
                         </div>
                     ))}
-                </div>
-            </div>
-
-            <div className="landing-section" style={{ paddingTop: '100px', paddingBottom: '140px' }}>
-                <div style={{ display: 'flex', gap: '80px', alignItems: 'center' }}>
-                    <div style={{ flex: 1 }}>
-                        <img src="assets/phone_mockup.png" style={{ width: '100%', borderRadius: '30px', boxShadow: '0 40px 80px rgba(0,0,0,0.5)' }} alt="Mobile App" />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                        <div style={{ textTransform: 'uppercase', color: 'var(--green)', fontWeight: '800', fontSize: '12px', letterSpacing: '2px', marginBottom: '24px' }}>On The Go</div>
-                        <h2 style={{ fontSize: '48px', fontWeight: '900', marginBottom: '24px', lineHeight: '1.1' }}>Trade Everywhere.<br />Miss Nothing.</h2>
-                        <p style={{ color: 'var(--text-light)', fontSize: '18px', lineHeight: '1.6', marginBottom: '40px' }}>
-                            Experience the full power of the desktop terminal on your mobile browser. Fully responsive, lightning fast, and no downloads required.
-                        </p>
-                        <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-                            <button className="landing-btn" style={{ background: '#fff', color: '#000', padding: '16px 32px' }} onClick={() => onStart('SIGNUP')}>Launch Web App</button>
-                            <div style={{ color: 'var(--text-light)', fontSize: '13px' }}>
-                                <i className="fas fa-info-circle" style={{ marginRight: '6px' }}></i>
-                                Native Apps Coming Soon
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
             <div className="landing-section" style={{ borderTop: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '32px', marginBottom: '40px', justifyContent: 'center' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px', marginBottom: '40px' }}>
                     {['PRIVACY', 'TERMS', 'RISK', 'REFUND'].map(type => (
-                        <span key={type} onClick={() => onStart(type)} style={{ fontSize: '13px', color: 'var(--text-light)', cursor: 'pointer', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                            {type === 'PRIVACY' ? 'Privacy Policy' : type === 'TERMS' ? 'Terms & Conditions' : type === 'RISK' ? 'Risk Disclosure' : 'Refund Policy'}
+                        <span key={type} onClick={() => onStart(type)} style={{ fontSize: '12px', color: 'var(--text-light)', cursor: 'pointer', fontWeight: '600' }}>
+                            {type.charAt(0) + type.slice(1).toLowerCase()} Policy
                         </span>
                     ))}
                 </div>
-                <div className="disclosure-text" style={{ fontSize: '12px', color: 'var(--text-light)', opacity: 0.5, textAlign: 'center', maxWidth: '800px', margin: '0 auto', lineHeight: '1.6' }}>
-                    © 2026 Nivarya Setu Financial Services. All rights reserved. <br />
-                    Investments in the securities market are subject to market risks. Read all the related documents carefully before investing. Brokerage will not exceed the SEBI prescribed limit.
+                <div className="disclosure-text" style={{ fontSize: '11px', color: 'var(--text-light)', opacity: 0.5 }}>
+                    © 2026 Nivarya Setu Financial Services. All rights reserved. <br /><br />
+                    Investments in the securities market are subject to market risks. Read all the related documents carefully before investing.
                 </div>
-            </div>
-
-            <div className="sticky-footer-bar">
-                <div style={{ fontSize: '14px', fontWeight: '700' }}>Open Demat Account <span style={{ color: 'var(--green)' }}>FREE</span></div>
-                <div style={{ width: '1px', height: '20px', background: 'var(--border)' }}></div>
-                <div style={{ fontSize: '13px', color: 'var(--text-light)' }}>Join Serious Traders</div>
-                <button className="landing-btn" style={{ padding: '8px 24px', fontSize: '13px', height: 'auto', borderRadius: '100px' }} onClick={() => onStart('SIGNUP')}>Start Now</button>
             </div>
         </div>
     );
@@ -264,180 +224,35 @@ const AuthPage = ({ type, onAuth, onBack }) => {
     };
 
     return (
-        <div className="auth-split-container" style={{ height: '100vh', overflowY: 'auto' }}>
-            <div className="auth-info-side">
-                <div className="auth-info-content">
-                    <div style={{ color: 'var(--blue)', fontWeight: '800', letterSpacing: '2px', marginBottom: '20px' }}>NIVARYA SETU</div>
-                    <h1 style={{ fontSize: '48px', fontWeight: '900', marginBottom: '24px', lineHeight: '1.2' }}>
-                        Welcome to the <br /> <span style={{ color: '#fff' }}>Future of Trading</span>
-                    </h1>
-                    <p style={{ color: 'var(--text-light)', fontSize: '18px', lineHeight: '1.6', marginBottom: '40px' }}>
-                        Access institutional-grade tools, real-time analytics, and zero-brokerage delivery trades. Trusted by serious traders.
-                    </p>
-                    <div className="auth-feature-list">
-                        <div className="auth-feature-item">
-                            <div className="auth-feature-icon"><i className="fas fa-bolt"></i></div>
-                            <div>
-                                <h4 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '4px' }}>Lightning Execution</h4>
-                                <p style={{ fontSize: '13px', color: 'var(--text-light)' }}>Low latency trade execution for the fastest market entry.</p>
-                            </div>
-                        </div>
-                        <div className="auth-feature-item">
-                            <div className="auth-feature-icon"><i className="fas fa-shield-alt"></i></div>
-                            <div>
-                                <h4 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '4px' }}>Bank-Grade Security</h4>
-                                <p style={{ fontSize: '13px', color: 'var(--text-light)' }}>256-bit encryption and 2FA protection for your funds.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div className="auth-form-side">
-                <div style={{ width: '100%', maxWidth: '400px' }}>
-                    <button className="nav-item" onClick={onBack} style={{ marginBottom: '32px', paddingLeft: 0 }}><i className="fas fa-arrow-left"></i> Back to Home</button>
-                    <h2 style={{ fontSize: '32px', fontWeight: '800', marginBottom: '8px' }}>{type === 'LOGIN' ? 'Welcome Back' : 'Create Account'}</h2>
-                    <p style={{ color: 'var(--text-light)', marginBottom: '32px' }}>{type === 'LOGIN' ? 'Enter your credentials to access your terminal.' : 'Start your financial journey in seconds.'}</p>
-
-                    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                        <div><label className="badge" style={{ marginBottom: '8px', display: 'block' }}>Email</label><input className="search-input" type="email" value={email} onChange={e => setEmail(e.target.value)} required style={{ paddingLeft: '15px' }} /></div>
-                        <div><label className="badge" style={{ marginBottom: '8px', display: 'block' }}>Password</label><input className="search-input" type="password" value={pass} onChange={e => setPass(e.target.value)} required style={{ paddingLeft: '15px' }} /></div>
-                        <button className="landing-btn" disabled={loading} style={{ width: '100%', borderRadius: '12px' }}>{loading ? 'Processing...' : (type === 'LOGIN' ? 'Login to Terminal' : 'Create Free Account')}</button>
-                    </form>
-                    <div style={{ margin: '24px 0', textAlign: 'center', color: 'var(--text-light)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px' }}>Or continue with</div>
-                    <button className="landing-btn" onClick={handleGoogleLogin} style={{ width: '100%', background: 'var(--bg-card)', color: '#fff', border: '1px solid var(--border)', borderRadius: '12px' }}><i className="fab fa-google"></i> Google Login</button>
-                </div>
+        <div className="auth-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#000' }}>
+            <div className="auth-card" style={{ background: 'var(--bg-panel)', padding: '40px', borderRadius: '12px', border: '1px solid var(--border)', width: '400px' }}>
+                <button className="nav-item" onClick={onBack} style={{ marginBottom: '20px' }}><i className="fas fa-arrow-left"></i> Home</button>
+                <h2 style={{ fontSize: '24px', marginBottom: '30px', textAlign: 'center' }}>{type === 'LOGIN' ? 'Login' : 'Sign Up'}</h2>
+                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div><label className="badge" style={{ marginBottom: '8px', display: 'block' }}>Email</label><input className="search-input" type="email" value={email} onChange={e => setEmail(e.target.value)} required style={{ paddingLeft: '15px' }} /></div>
+                    <div><label className="badge" style={{ marginBottom: '8px', display: 'block' }}>Password</label><input className="search-input" type="password" value={pass} onChange={e => setPass(e.target.value)} required style={{ paddingLeft: '15px' }} /></div>
+                    <button className="landing-btn" disabled={loading} style={{ width: '100%' }}>{loading ? '...' : type}</button>
+                </form>
+                <div style={{ margin: '20px 0', textAlign: 'center', color: 'var(--text-light)', fontSize: '11px' }}>OR</div>
+                <button className="landing-btn" onClick={handleGoogleLogin} style={{ width: '100%', background: '#fff', color: '#000' }}><i className="fab fa-google"></i> Google Login</button>
             </div>
         </div>
     );
 };
 
 const LegalPage = ({ type, onBack }) => {
-    const policies = {
-        PRIVACY: {
-            title: "Privacy Policy",
-            updated: "Jan 1, 2026",
-            content: (
-                <>
-                    <p>At Nivarya Setu, we prioritize the trust you place in us when sharing your personal and financial data. This policy outlines our improved standards for data protection.</p>
-
-                    <h3>1. Information Collection</h3>
-                    <p>We collect information necessary to provide our trading services, including basic KYC details (Name, PAN, Aadhaar), financial history, and device telemetry for security purposes.</p>
-
-                    <h3>2. Data Usage</h3>
-                    <p>Your data is used solely for:</p>
-                    <ul>
-                        <li>Executing trades on exchanges (NSE/BSE).</li>
-                        <li>Compliance with SEBI and PMLA regulations.</li>
-                        <li>Improving platform performance and stability.</li>
-                    </ul>
-
-                    <h3>3. Data Security</h3>
-                    <p>We employ military-grade AES-256 encryption for data at rest and TLS 1.3 for data in transit. We do not sell your personal data to third parties.</p>
-                </>
-            )
-        },
-        TERMS: {
-            title: "Terms & Conditions",
-            updated: "Jan 1, 2026",
-            content: (
-                <>
-                    <p>Welcome to Nivarya Setu. By accessing our platform, you agree to be bound by these terms. If you do not agree, strictly do not use our services.</p>
-
-                    <h3>1. Eligibility</h3>
-                    <p>You must be an Indian resident, 18 years or older, with a valid PAN and bank account to open a Demat account.</p>
-
-                    <h3>2. Acceptable Use</h3>
-                    <p>You agree not to use the platform for any unlawful activities, including money laundering or market manipulation. Algo-trading APIs must be used in compliance with exchange guidelines.</p>
-
-                    <h3>3. Limitation of Liability</h3>
-                    <p>Nivarya Setu is a technology provider. We are not liable for losses due to market volatility, technical failures (isp/exchange side), or user error.</p>
-                </>
-            )
-        },
-        RISK: {
-            title: "Risk Disclosure",
-            updated: "Jan 1, 2026",
-            content: (
-                <>
-                    <div style={{ background: 'rgba(235, 91, 60, 0.1)', borderLeft: '4px solid var(--red)', padding: '16px', marginBottom: '24px' }}>
-                        <strong>WARNING:</strong> Investments in the securities market are subject to market risks. Read all the related documents carefully before investing.
-                    </div>
-
-                    <h3>1. Market Risk</h3>
-                    <p>The value of securities can fluctuate significantly. Past performance is not indicative of future results.</p>
-
-                    <h3>2. Derivatives Risk (F&O)</h3>
-                    <p>Derivatives are leveraged products. A small price movement can lead to the complete loss of your capital. 9 out of 10 individual traders in equity Future and Options Segment incurred net losses.</p>
-
-                    <h3>3. Technology Risk</h3>
-                    <p>While we strive for 99.9% uptime, internet-based trading is subject to connection failures. We recommend maintaining backup modes of trading (Call & Trade).</p>
-                </>
-            )
-        },
-        REFUND: {
-            title: "Refund Policy",
-            updated: "Jan 1, 2026",
-            content: (
-                <>
-                    <p>Nivarya Setu aims for transparency in billing. This policy clarifies our refund structure.</p>
-
-                    <h3>1. Account Opening Fees</h3>
-                    <p>If applicable, account opening fees are non-refundable once the KYC process has been initiated with the KRAs/Exchanges.</p>
-
-                    <h3>2. Brokerage & Taxes</h3>
-                    <p>Brokerage charged on executed trades is non-refundable. STT, GST, and Stamp Duty are collected on behalf of the government and cannot be refunded.</p>
-
-                    <h3>3. Software Subscriptions</h3>
-                    <p>Pro-rata refunds are available for annual software subscriptions if cancelled within 7 days of purchase. No refunds for monthly plans.</p>
-                </>
-            )
-        }
-    };
-
-    const doc = policies[type] || { title: "Legal", content: "Information not found." };
+    const content = {
+        PRIVACY: { title: "Privacy Policy", body: "We protect your financial data with industry-standard encryption." },
+        TERMS: { title: "Terms & Conditions", body: "By using Nivarya Setu, you agree to our service terms." },
+        RISK: { title: "Risk Disclosure", body: "Trading involves risk of capital loss." },
+        REFUND: { title: "Refund Policy", body: "Subscription fees are generally non-refundable." }
+    }[type] || { title: "Legal", body: "Legal information." };
 
     return (
-        <div style={{ height: '100vh', overflowY: 'auto', background: '#000', padding: '60px 20px' }}>
-            <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '40px' }}>
-                    <button className="nav-item" onClick={onBack} style={{ paddingLeft: 0, color: 'var(--text-light)' }}>
-                        <i className="fas fa-arrow-left" style={{ marginRight: '8px' }}></i> Back to Home
-                    </button>
-                    <div style={{ fontSize: '12px', color: 'var(--text-light)', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: '100px' }}>
-                        Legal Compliance
-                    </div>
-                </div>
-
-                <div className="fade-in" style={{ background: 'var(--bg-panel)', border: '1px solid var(--border)', borderRadius: '24px', padding: '60px', position: 'relative', overflow: 'hidden' }}>
-                    {/* Decorative Background */}
-                    <div style={{ position: 'absolute', top: 0, right: 0, width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(0, 208, 156, 0.05) 0%, transparent 70%)', pointerEvents: 'none' }}></div>
-
-                    <div style={{ marginBottom: '40px', borderBottom: '1px solid var(--border)', paddingBottom: '30px' }}>
-                        <h1 style={{ fontSize: '42px', fontWeight: '800', marginBottom: '16px' }}>{doc.title}</h1>
-                        <div style={{ color: 'var(--text-light)', fontSize: '14px' }}>Last Updated: {doc.updated || 'Jan 1, 2026'}</div>
-                    </div>
-
-                    <div className="legal-content" style={{ fontSize: '16px', lineHeight: '1.8', color: '#ccc' }}>
-                        {doc.content}
-                    </div>
-
-                    <div style={{ marginTop: '60px', paddingTop: '30px', borderTop: '1px solid var(--border)', display: 'flex', gap: '20px', alignItems: 'center' }}>
-                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)' }}>
-                            <i className="fas fa-shield-alt" style={{ color: 'var(--green)' }}></i>
-                        </div>
-                        <div style={{ fontSize: '13px', color: 'var(--text-light)' }}>
-                            Nivarya Setu Financial Services · SEBI Reg. No. INZ0001234567
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <style>{`
-                .legal-content h3 { font-size: 20px; font-weight: 700; margin: 40px 0 16px 0; color: #fff; }
-                .legal-content p { margin-bottom: 16px; }
-                .legal-content ul { padding-left: 20px; margin-bottom: 16px; }
-                .legal-content li { marginBottom: 8px; }
-            `}</style>
+        <div style={{ padding: '80px 20px', maxWidth: '800px', margin: '0 auto' }}>
+            <button className="nav-item" onClick={onBack} style={{ marginBottom: '40px' }}><i className="fas fa-arrow-left"></i> Home</button>
+            <h1 style={{ fontSize: '36px', marginBottom: '32px' }}>{content.title}</h1>
+            <div style={{ background: 'var(--bg-card)', padding: '40px', borderRadius: '20px', border: '1px solid var(--border)', lineHeight: '1.8' }}>{content.body}</div>
         </div>
     );
 };
@@ -485,7 +300,31 @@ const ChartWidget = ({ symbol, onTrade }) => {
         const tv = window.TradingView;
         if (tv && ref.current) {
             ref.current.id = "tv_" + Math.random().toString(36).substr(2, 9);
-            new tv.widget({ "autosize": true, "symbol": `BSE:${symbol ? symbol.replace('.NS', '') : "RELIANCE"}`, "interval": "D", "theme": "dark", "container_id": ref.current.id });
+            let tvSymbol = symbol || "RELIANCE";
+            if (tvSymbol.endsWith(".NS")) {
+                tvSymbol = "NSE:" + tvSymbol.replace(".NS", "");
+            } else if (tvSymbol.endsWith(".BO")) {
+                tvSymbol = "BSE:" + tvSymbol.replace(".BO", "");
+            } else if (tvSymbol.includes("FUT") || tvSymbol.includes("CE") || tvSymbol.includes("PE")) {
+                if (tvSymbol.includes("NIFTY")) {
+                    tvSymbol = "NSE:NIFTY";
+                } else if (tvSymbol.includes("BANKNIFTY")) {
+                    tvSymbol = "NSE:BANKNIFTY";
+                } else {
+                    tvSymbol = "NSE:NIFTY";
+                }
+            } else if (tvSymbol === "GOLD 05OCT FUT") {
+                tvSymbol = "COMEX:GC1!";
+            } else {
+                tvSymbol = tvSymbol;
+            }
+            new tv.widget({ 
+                "autosize": true, 
+                "symbol": tvSymbol, 
+                "interval": "D", 
+                "theme": "dark", 
+                "container_id": ref.current.id 
+            });
         }
     }, [symbol]);
     return (
@@ -520,7 +359,7 @@ const InvestDashboard = ({ addToast }) => {
                         <p>{item.desc || item.status}</p>
                         <div className="flex-between" style={{ marginTop: 'auto' }}>
                             <div style={{ fontSize: '11px', color: 'var(--text-light)' }}>Min. Invest: ₹{section === 'MF' ? '500' : '5,000'}</div>
-                            <button className="landing-btn" style={{ padding: '12px 24px', fontSize: '14px', borderRadius: '8px' }} onClick={() => addToast('success', 'Order Placed', `Request for ${item.name} sent.`)}>Invest</button>
+                            <button className="landing-btn" style={{ padding: '12px 24px', fontSize: '14px', borderRadius: '8px' }} onClick={() => addToast('success', 'Order Placed', `Request for {item.name} sent.`)}>Invest</button>
                         </div>
                     </div>
                 ))}
@@ -575,11 +414,10 @@ const OrderModal = ({ isOpen, type, symbol, price, onClose, onSubmit }) => {
 };
 
 const WATCHLIST_DATA = {
-    EQUITY: [{ id: 'RELIANCE.NS', n: 'Reliance', def: 2450 }, { id: 'TCS.NS', n: 'TCS', def: 3240 }, { id: 'HDFCBANK.NS', n: 'HDFC Bank', def: 1650 }, { id: 'INFY.NS', n: 'Infosys', def: 1420 }, { id: 'SBIN.NS', n: 'SBI', def: 580 }],
+    EQUITY: [{ id: 'RELIANCE.NS', n: 'Reliance Industries', def: 2450 }, { id: 'TCS.NS', n: 'TCS', def: 3240 }, { id: 'HDFCBANK.NS', n: 'HDFC Bank', def: 1650 }, { id: 'INFY.NS', n: 'Infosys', def: 1420 }, { id: 'SBIN.NS', n: 'SBI', def: 580 }],
     FNO: [{ id: 'NIFTY 25OCT FUT', n: 'NIFTY FUT', def: 19650 }, { id: 'BANKNIFTY 25OCT FUT', n: 'BANKNIFTY FUT', def: 44500 }],
     MCX: [{ id: 'GOLD 05OCT FUT', n: 'GOLD', def: 59500 }], CDS: []
 };
-const ALL_SEGMENTS = [...WATCHLIST_DATA.EQUITY, ...WATCHLIST_DATA.FNO, ...WATCHLIST_DATA.MCX];
 
 const App = () => {
     const [view, setView] = useState(localStorage.getItem('auth') ? 'APP' : 'LANDING');
@@ -592,6 +430,15 @@ const App = () => {
     const [toasts, setToasts] = useState([]);
     const [profileMenu, setProfileMenu] = useState(false);
 
+    // Watchlist & Search States
+    const [watchlist, setWatchlist] = useState(() => {
+        const saved = localStorage.getItem('watchlist');
+        return saved ? JSON.parse(saved) : WATCHLIST_DATA.EQUITY;
+    });
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [isSearching, setIsSearching] = useState(false);
+
     const addToast = (type, title, message) => { const id = Date.now(); setToasts(prev => [...prev, { id, type, title, message }]); setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000); };
     const handleAuth = (u) => { localStorage.setItem('auth', 'true'); localStorage.setItem('user', JSON.stringify(u)); setUser(u); setView('APP'); addToast('success', 'Logged In', `Hello, ${u.name}`); };
     const logout = () => { localStorage.clear(); setView('LANDING'); };
@@ -599,13 +446,37 @@ const App = () => {
     const refresh = async () => {
         if (view !== 'APP') return;
         try {
-            const r1 = await fetch('/api/batch_quotes?symbols=' + ALL_SEGMENTS.map(x => x.id).join(','));
+            const symbolsToFetch = [...watchlist, ...WATCHLIST_DATA.FNO, ...WATCHLIST_DATA.MCX].map(x => x.id);
+            const r1 = await fetch('/api/batch_quotes?symbols=' + symbolsToFetch.join(','));
             if (r1.ok) setQtys(await r1.json());
             const r2 = await fetch('/api/portfolio');
             if (r2.ok) setPortfolio(await r2.json());
         } catch (e) { }
     };
-    useEffect(() => { window.scrollTo(0, 0); }, [view]);
+
+    useEffect(() => { refresh(); const t = setInterval(refresh, 5000); return () => clearInterval(t); }, [view, watchlist]);
+
+    // Debounce search effect
+    useEffect(() => {
+        if (searchQuery.trim().length < 2) {
+            setSearchResults([]);
+            return;
+        }
+        const delayDebounceFn = setTimeout(async () => {
+            setIsSearching(true);
+            try {
+                const r = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`);
+                if (r.ok) {
+                    setSearchResults(await r.json());
+                }
+            } catch (e) {
+                console.error("Search error:", e);
+            } finally {
+                setIsSearching(false);
+            }
+        }, 400);
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchQuery]);
 
     if (view === 'LANDING') return <LandingPage onStart={setView} />;
     if (view === 'LOGIN' || view === 'SIGNUP') return <AuthPage type={view} onAuth={handleAuth} onBack={() => setView('LANDING')} />;
@@ -650,15 +521,67 @@ const App = () => {
             <div className="main">
                 {tab === 'TRADE' && (
                     <div className="sidebar">
-                        <div className="search-area">
+                        <div className="search-area" style={{ position: 'relative' }}>
                             <i className="fas fa-search" style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '40px', color: 'var(--text-light)', opacity: 0.5 }}></i>
-                            <input className="search-input" placeholder="Search instrument..." />
+                            <input 
+                                className="search-input" 
+                                placeholder="Search symbol (e.g. AAPL, Reliance)..." 
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                            />
+                            {searchQuery.trim().length >= 2 && (
+                                <div className="search-results-dropdown custom-scroll" style={{
+                                    position: 'absolute',
+                                    top: '100%',
+                                    left: '24px',
+                                    right: '24px',
+                                    background: 'var(--bg-panel)',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: '12px',
+                                    zIndex: 10,
+                                    maxHeight: '250px',
+                                    overflowY: 'auto',
+                                    boxShadow: '0 8px 24px rgba(0,0,0,0.5)'
+                                }}>
+                                    {isSearching ? (
+                                        <div style={{ padding: '15px', fontSize: '12px', color: 'var(--text-light)', textAlign: 'center' }}>Searching...</div>
+                                    ) : searchResults.length === 0 ? (
+                                        <div style={{ padding: '15px', fontSize: '12px', color: 'var(--text-light)', textAlign: 'center' }}>No results found</div>
+                                    ) : (
+                                        searchResults.map(res => (
+                                            <div 
+                                                key={res.symbol} 
+                                                className="search-result-item" 
+                                                onClick={() => {
+                                                    if (!watchlist.some(w => w.id === res.symbol)) {
+                                                        const updated = [...watchlist, { id: res.symbol, n: res.name, def: 100 }];
+                                                        setWatchlist(updated);
+                                                        localStorage.setItem('watchlist', JSON.stringify(updated));
+                                                    }
+                                                    setSymbol(res.symbol);
+                                                    setSearchQuery('');
+                                                    setSearchResults([]);
+                                                }}
+                                                style={{
+                                                    padding: '12px 15px',
+                                                    cursor: 'pointer',
+                                                    borderBottom: '1px solid var(--border)',
+                                                    fontSize: '12px'
+                                                }}
+                                            >
+                                                <div style={{ fontWeight: '700' }}>{res.symbol}</div>
+                                                <div style={{ fontSize: '10px', color: 'var(--text-light)', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{res.name} ({res.exchange})</div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            )}
                         </div>
                         <div className="stock-list custom-scroll">
-                            {WATCHLIST_DATA.EQUITY.map(w => (
-                                <div key={w.id} className={`stock-item ${symbol === w.id ? 'active' : ''}`} onClick={() => setSymbol(w.id)}>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontWeight: '700', fontSize: '14px' }}>{w.n}</div>
+                            {watchlist.map(w => (
+                                <div key={w.id} className={`stock-item ${symbol === w.id ? 'active' : ''}`} style={{ position: 'relative' }} onClick={() => setSymbol(w.id)}>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontWeight: '700', fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{w.n}</div>
                                         <div style={{ fontSize: '10px', color: 'var(--text-light)', marginTop: '2px' }}>{w.id}</div>
                                     </div>
                                     <Sparkline color={qtys[w.id]?.change >= 0 ? 'var(--green)' : 'var(--red)'} />
@@ -666,6 +589,34 @@ const App = () => {
                                         <div className={`price-val ${qtys[w.id]?.change >= 0 ? 'text-up' : 'text-down'}`}>₹{qtys[w.id]?.price || w.def}</div>
                                         <div style={{ fontSize: '10px', opacity: 0.6, marginTop: '2px' }}>{qtys[w.id]?.change >= 0 ? '+' : ''}{qtys[w.id]?.change || '0.00'}%</div>
                                     </div>
+                                    {watchlist.length > 2 && (
+                                        <button 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const updated = watchlist.filter(x => x.id !== w.id);
+                                                setWatchlist(updated);
+                                                localStorage.setItem('watchlist', JSON.stringify(updated));
+                                                if (symbol === w.id) {
+                                                    setSymbol(updated[0]?.id || 'RELIANCE.NS');
+                                                }
+                                            }}
+                                            style={{
+                                                background: 'transparent',
+                                                border: 'none',
+                                                color: 'var(--red)',
+                                                cursor: 'pointer',
+                                                padding: '4px',
+                                                marginLeft: '8px',
+                                                opacity: 0.3,
+                                                transition: 'opacity 0.2s'
+                                            }}
+                                            onMouseEnter={e => e.currentTarget.style.opacity = 1}
+                                            onMouseLeave={e => e.currentTarget.style.opacity = 0.3}
+                                            title="Remove from Watchlist"
+                                        >
+                                            <i className="fas fa-trash"></i>
+                                        </button>
+                                    )}
                                 </div>
                             ))}
                         </div>
