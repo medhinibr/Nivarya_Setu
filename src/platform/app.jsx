@@ -218,9 +218,26 @@ const AuthPage = ({ type, onAuth, onBack }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault(); setLoading(true);
-        const r = await fetch(`/api/auth/${type.toLowerCase()}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password: pass }) });
-        const d = await r.json(); setLoading(false);
-        if (d.status === 'success') onAuth(d.user || { name: 'Demo User' }); else alert(d.message);
+        try {
+            const r = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+            const d = await r.json(); setLoading(false);
+            if (r.ok && d.status === 'success') {
+                localStorage.setItem("user_email", d.user.email);
+                localStorage.setItem("virtual_balance", d.user.virtual_balance);
+                alert(`Welcome! Your balance is ₹${parseFloat(d.user.virtual_balance).toLocaleString("en-IN")}`);
+                onAuth(d.user);
+            } else {
+                alert("Error: " + (d.message || d.error || "Login failed"));
+            }
+        } catch (error) {
+            setLoading(false);
+            console.error("Login failed", error);
+            alert("Connection error: " + error.message);
+        }
     };
 
     return (
@@ -487,7 +504,7 @@ const App = () => {
             <ToastContainer toasts={toasts} />
             <OrderModal isOpen={modal.open} type={modal.type} symbol={symbol} price={qtys[symbol]?.price || 0} onClose={() => setModal({ ...modal, open: false })} onSubmit={async (d) => {
                 try {
-                    const res = await fetch('/api/place_order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ symbol, side: modal.type, ...d }) });
+                    const res = await fetch('/api/place_order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ symbol, side: modal.type, email: localStorage.getItem("user_email"), ...d }) });
                     if (res.ok) {
                         const data = await res.json();
                         if (data.status === 'success') {
@@ -519,7 +536,7 @@ const App = () => {
                     ))}
                 </div>
                 <div className="user-info" onClick={() => setProfileMenu(!profileMenu)} style={{ cursor: 'pointer', position: 'relative' }}>
-                    <div style={{ color: 'var(--green)', fontWeight: '800', fontSize: '15px' }}>₹{(portfolio.funds || 0).toLocaleString()}</div>
+                    <div style={{ color: 'var(--green)', fontWeight: '800', fontSize: '15px' }}>₹{(portfolio.funds !== undefined ? portfolio.funds : parseFloat(localStorage.getItem("virtual_balance") || 100000)).toLocaleString("en-IN")}</div>
                     <div className="user-avatar">{user?.name[0]}</div>
                     {profileMenu && (
                         <div className="profile-dropdown" style={{ top: '130%', right: '0' }}>

@@ -8,6 +8,7 @@ import urllib.request
 import json
 import yfinance as yf
 import pandas as pd
+from supabase import create_client, Client
 
 # Load .env manually from current directory
 env_path = os.path.join(os.path.dirname(__file__), '.env')
@@ -18,6 +19,23 @@ try:
                 k, v = line.strip().split('=', 1)
                 os.environ[k] = v.strip().strip('"') # Handle quotes if present
 except: pass
+
+supabase_url = os.environ.get("SUPABASE_URL")
+supabase_key = os.environ.get("SUPABASE_KEY")
+
+# Auto-correct swapped URL and KEY if pasted in reverse
+if supabase_url and supabase_key:
+    if not supabase_url.startswith("http") and supabase_key.startswith("http"):
+        supabase_url, supabase_key = supabase_key, supabase_url
+
+supabase = None
+if supabase_url and supabase_key:
+    try:
+        supabase = create_client(supabase_url, supabase_key)
+    except Exception as e:
+        print(f"Supabase Client Init Error: {e}")
+
+
 
 YF_MAP = {
     'RELIANCE.NS': 'RELIANCE.NS',
@@ -214,13 +232,69 @@ MOCK_BONDS = [
 def home():
     return send_from_directory('platform', 'index.html')
 
+@app.route('/api/login', methods=['POST'])
 @app.route('/api/auth/login', methods=['POST'])
 def login():
-    data = request.json
-    # Simple simulation: Always succeed if email and password are provided
-    if data.get('email') and data.get('password'):
-        return jsonify({"status": "success", "user": {"name": "Madhav", "email": data['email']}})
-    return jsonify({"status": "error", "message": "Invalid credentials"}), 401
+    try:
+        data = request.json
+        email = data.get('email')
+
+        if not email:
+            return jsonify({"status": "error", "message": "Email is required"}), 400
+
+        # Step A: Check database for email if Supabase client is initialized
+        if supabase:
+            response = supabase.table('users').select('*').eq('email', email).execute()
+
+            # Step B: User already exists, return data
+            if len(response.data) > 0:
+                user_data = response.data[0]
+                # Sync local PAPER_STATE funds
+                PAPER_STATE['funds'] = float(user_data.get('virtual_balance', 100000.0))
+                return jsonify({
+                    "status": "success",
+                    "message": "Login successful",
+                    "user": {
+                        "name": email.split('@')[0],
+                        "email": email,
+                        "virtual_balance": float(user_data.get('virtual_balance', 100000.0))
+                    }
+                }), 200
+            
+            # Step C: New user, insert into DB
+            else:
+                new_user = {
+                    "email": email,
+                    "virtual_balance": 100000.0
+                }
+                insert_response = supabase.table('users').insert(new_user).execute()
+                user_data = insert_response.data[0]
+                PAPER_STATE['funds'] = 100000.0
+                return jsonify({
+                    "status": "success",
+                    "message": "New account created",
+                    "user": {
+                        "name": email.split('@')[0],
+                        "email": email,
+                        "virtual_balance": 100000.0
+                    }
+                }), 201
+        else:
+            # Fallback to local memory simulation
+            PAPER_STATE['funds'] = 100000.0
+            return jsonify({
+                "status": "success",
+                "message": "Login successful (Simulation)",
+                "user": {
+                    "name": email.split('@')[0],
+                    "email": email,
+                    "virtual_balance": 100000.0
+                }
+            }), 200
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 
 @app.route('/api/auth/signup', methods=['POST'])
 def signup():
@@ -480,7 +554,8 @@ def search_tickers():
 
 @app.route('/api/add_funds', methods=['POST'])
 def add_funds():
-    amt = float(request.json.get('amount', 0))
+    data = request.json
+    amt = float(data.get('amount', 0))
     PAPER_STATE['funds'] += amt
     
     # Ledger Entry
@@ -493,6 +568,14 @@ def add_funds():
         "desc": "Funds Added via UPI"
     })
     
+    # Sync to Supabase
+    email = data.get('email')
+    if supabase and email:
+        try:
+            supabase.table('users').update({"virtual_balance": PAPER_STATE['funds']}).eq('email', email).execute()
+        except Exception as e:
+            print(f"Failed to sync add_funds to Supabase: {e}")
+            
     return jsonify({"status": "success", "new_balance": PAPER_STATE['funds']})
 
 @app.route('/api/place_order', methods=['POST'])
@@ -559,6 +642,14 @@ def place_order():
         else: 
              p['qty'] -= qty
              p['avg'] = price 
+
+    # Sync to Supabase
+    email = data.get('email')
+    if supabase and email:
+        try:
+            supabase.table('users').update({"virtual_balance": PAPER_STATE['funds']}).eq('email', email).execute()
+        except Exception as e:
+            print(f"Failed to sync order balance to Supabase: {e}")
 
     return jsonify({"status": "success", "message": "Order Placed"})
 
