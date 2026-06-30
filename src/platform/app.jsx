@@ -486,8 +486,23 @@ const App = () => {
         <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
             <ToastContainer toasts={toasts} />
             <OrderModal isOpen={modal.open} type={modal.type} symbol={symbol} price={qtys[symbol]?.price || 0} onClose={() => setModal({ ...modal, open: false })} onSubmit={async (d) => {
-                await fetch('/api/place_order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ symbol, side: modal.type, ...d }) });
-                setModal({ ...modal, open: false }); addToast('success', 'Order Placed', 'Order processed.'); refresh();
+                try {
+                    const res = await fetch('/api/place_order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ symbol, side: modal.type, ...d }) });
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.status === 'success') {
+                            addToast('success', 'Order Executed', `Successfully ${modal.type.toLowerCase()}ed ${d.qty} shares of ${symbol}.`);
+                        } else {
+                            addToast('error', 'Order Failed', data.message || 'Execution failed.');
+                        }
+                    } else {
+                        addToast('error', 'Order Failed', 'Server error. Please try again.');
+                    }
+                } catch (e) {
+                    addToast('error', 'Order Failed', 'Network error.');
+                }
+                setModal({ ...modal, open: false });
+                refresh();
             }} />
 
             <div className="header">
