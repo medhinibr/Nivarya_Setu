@@ -165,15 +165,13 @@ mock_defaults = {
 
 # --- STATE ---
 PAPER_STATE = {
-    "funds": 1000000.00,
-    "holdings": [ 
-        {"symbol": "TCS.NS", "qty": 10, "avg": 3200.00, "ltp": 3250.00, "type": "CNC", "value": 32500, "pnl": 500, "pnl_pct": 1.5}, 
-    ],
+    "funds": 100000.00,
+    "holdings": [],
     "positions": {}, 
     "orders": [],
     "transactions": [
         {"id": 1, "time": "2023-10-01 10:00:23", "desc": "Account Opened", "type": "SYSTEM", "amount": 0, "bal": 0},
-        {"id": 2, "time": "2023-10-01 10:05:45", "desc": "Welcome Bonus Funds", "type": "DEPOSIT", "amount": 1000000.00, "bal": 1000000.00}
+        {"id": 2, "time": "2023-10-01 10:05:45", "desc": "Welcome Bonus Funds", "type": "DEPOSIT", "amount": 100000.00, "bal": 100000.00}
     ]
 }
 
