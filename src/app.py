@@ -10,23 +10,22 @@ import yfinance as yf
 import pandas as pd
 from supabase import create_client, Client
 
-# Load .env manually from current directory
+from dotenv import load_dotenv
+
+# Load .env manually from current directory with force override
 env_path = os.path.join(os.path.dirname(__file__), '.env')
-try:
-    with open(env_path, 'r') as f:
-        for line in f:
-            if '=' in line:
-                k, v = line.strip().split('=', 1)
-                os.environ[k] = v.strip().strip('"') # Handle quotes if present
-except: pass
+load_dotenv(dotenv_path=env_path, override=True)
 
 supabase_url = os.environ.get("SUPABASE_URL")
 supabase_key = os.environ.get("SUPABASE_KEY")
 
-# Auto-correct swapped URL and KEY if pasted in reverse
-if supabase_url and supabase_key:
-    if not supabase_url.startswith("http") and supabase_key.startswith("http"):
-        supabase_url, supabase_key = supabase_key, supabase_url
+# Remove /rest/v1/ suffix if present to prevent PGRST125 invalid path error
+if supabase_url and "/rest/v1" in supabase_url:
+    supabase_url = supabase_url.split("/rest/v1")[0]
+
+print(f"DEBUG: URL is {supabase_url}")
+if supabase_key:
+    print(f"DEBUG: KEY starts with {supabase_key[:10]}...")
 
 supabase = None
 if supabase_url and supabase_key:
@@ -34,6 +33,7 @@ if supabase_url and supabase_key:
         supabase = create_client(supabase_url, supabase_key)
     except Exception as e:
         print(f"Supabase Client Init Error: {e}")
+
 
 
 
