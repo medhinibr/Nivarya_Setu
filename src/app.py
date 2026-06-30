@@ -501,7 +501,7 @@ def place_order():
     symbol = data.get('symbol')
     side = data.get('side') 
     qty = int(data.get('qty', 0))
-    product = data.get('product', 'MIS') 
+    product = data.get('product', 'CNC') 
     price = float(data.get('price', 0)) 
 
     # 1. VALIDATIONS
