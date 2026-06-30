@@ -478,16 +478,97 @@ def get_funds_history():
 
 @app.route('/api/portfolio')
 def get_portfolio():
-    total_val = PAPER_STATE['funds']
+    email = request.args.get('email')
     
-    # Collect all symbols we need to fetch quotes for
+    # If Supabase client is initialized and email is provided, query from database
+    if supabase and email:
+        try:
+            # 1. Fetch user balance
+            user_res = supabase.table('users').select('*').eq('email', email).execute()
+            funds = 100000.0
+            if user_res.data:
+                funds = float(user_res.data[0].get('virtual_balance', 100000.0))
+                
+            # 2. Fetch holdings from portfolio table
+            portfolio_res = supabase.table('portfolio').select('*').eq('user_email', email).execute()
+            holdings = []
+            holding_syms = []
+            for item in portfolio_res.data:
+                sym = item.get('symbol')
+                qty = float(item.get('quantity', 0))
+                avg_price = float(item.get('average_price', 0))
+                if qty > 0:
+                    holdings.append({
+                        "symbol": sym,
+                        "qty": qty,
+                        "avg": avg_price,
+                        "ltp": avg_price,
+                        "type": "CNC",
+                        "value": qty * avg_price,
+                        "pnl": 0.0,
+                        "pnl_pct": 0.0
+                    })
+                    holding_syms.append(sym)
+            
+            # Fetch batch quotes to update current price (LTP) and PNL
+            quotes = quote_cache.get_quotes(holding_syms) if holding_syms else {}
+            total_val = funds
+            for h in holdings:
+                sym = h['symbol']
+                current_price = quotes.get(sym, {}).get('price', h['avg'])
+                h['ltp'] = round(current_price, 2)
+                h['value'] = round(current_price * h['qty'], 2)
+                h['pnl'] = round(h['value'] - (h['avg'] * h['qty']), 2)
+                h['pnl_pct'] = round((h['pnl'] / (h['avg'] * h['qty'])) * 100, 2) if h['avg'] != 0 else 0.0
+                total_val += h['value']
+
+            # 3. Fetch orders (transactions)
+            tx_res = supabase.table('transactions').select('*').eq('user_email', email).execute()
+            orders = []
+            
+            # Sort locally since ordering might need specific field index
+            sorted_txs = sorted(tx_res.data, key=lambda x: x.get('created_at', ''), reverse=True)
+            for tx in sorted_txs:
+                created_at = tx.get('created_at', '')
+                if created_at:
+                    try:
+                        time_str = created_at.split('T')[1].split('.')[0]
+                    except:
+                        time_str = datetime.now().strftime("%H:%M:%S")
+                else:
+                    time_str = datetime.now().strftime("%H:%M:%S")
+                
+                orders.append({
+                    "time": time_str,
+                    "symbol": tx.get('symbol'),
+                    "type": tx.get('order_type'),
+                    "product": "CNC",
+                    "qty": float(tx.get('quantity', 0)),
+                    "price": float(tx.get('price', 0)),
+                    "status": "COMPLETE"
+                })
+
+            return jsonify({
+                "funds": round(funds, 2),
+                "holdings": holdings,
+                "positions": [], 
+                "orders": orders,
+                "total_value": round(total_val, 2),
+                "total_pnl": round(sum(h['pnl'] for h in holdings), 2)
+            })
+
+        except Exception as e:
+            print(f"Error fetching portfolio from Supabase: {e}")
+            pass
+
+    # Fallback to local memory simulation (PAPER_STATE)
+    total_val = PAPER_STATE['funds']
     holding_syms = [h['symbol'] for h in PAPER_STATE['holdings']]
     position_syms = list(PAPER_STATE['positions'].keys())
     all_syms = list(set(holding_syms + position_syms))
     
     quotes = quote_cache.get_quotes(all_syms) if all_syms else {}
     
-    # 1. Update Holdings
     for h in PAPER_STATE['holdings']:
         sym = h['symbol']
         current_price = quotes.get(sym, {}).get('price', h['avg'])
@@ -497,13 +578,11 @@ def get_portfolio():
         h['pnl_pct'] = round((h['pnl'] / (h['avg'] * h['qty'])) * 100, 2) if h['avg'] != 0 else 0.0
         total_val += h['value']
 
-    # 2. Update Intraday Positions
     pos_list = []
     total_pnl = 0
     for sym, pos in PAPER_STATE['positions'].items():
         if pos['qty'] != 0:
             current_price = quotes.get(sym, {}).get('price', pos['avg'])
-            # MTM
             mtm = (current_price - pos['avg']) * pos['qty']
             pos_entry = {
                 "symbol": sym, "qty": pos['qty'], "avg": pos['avg'], 
@@ -580,78 +659,147 @@ def add_funds():
 
 @app.route('/api/place_order', methods=['POST'])
 def place_order():
-    data = request.json
-    symbol = data.get('symbol')
-    side = data.get('side') 
-    qty = int(data.get('qty', 0))
-    product = data.get('product', 'CNC') 
-    price = float(data.get('price', 0)) 
+    try:
+        data = request.json
+        email = data.get('email')
+        symbol = data.get('symbol')
+        side = (data.get('order_type') or data.get('side') or 'BUY').upper()
+        qty = float(data.get('quantity') or data.get('qty') or 0)
+        price = float(data.get('price') or 0)
+        product = data.get('product', 'CNC')
 
-    # 1. VALIDATIONS
-    order_value = qty * price
-    
-    if side == 'BUY':
-        if PAPER_STATE['funds'] < order_value:
-             return jsonify({"status": "error", "message": f"Insufficient Margin. Req: {order_value}"})
-        PAPER_STATE['funds'] -= order_value 
+        if qty <= 0:
+            return jsonify({"status": "error", "message": "Quantity must be greater than zero"}), 400
 
-    elif side == 'SELL':
-        if product == 'CNC':
-            holding_item = next((h for h in PAPER_STATE['holdings'] if h['symbol'] == symbol), None)
-            if not holding_item or holding_item['qty'] < qty:
-                 return jsonify({"status": "error", "message": "Insufficient Holdings"})
-        
-        if side == 'SELL': 
-            PAPER_STATE['funds'] += order_value 
+        total_value = qty * price
 
-    # 2. EXECUTION
-    PAPER_STATE['orders'].append({
-         "time": datetime.now().strftime("%H:%M:%S"),
-         "symbol": symbol, "type": side, "product": product,
-         "qty": qty, "price": price, "status": "COMPLETE"
-    })
+        # If Supabase client is initialized and email is provided
+        if supabase and email:
+            # 1. Fetch user balance
+            user_res = supabase.table('users').select('*').eq('email', email).execute()
+            if not user_res.data:
+                return jsonify({"status": "error", "message": "User not found in database"}), 404
+            
+            user_data = user_res.data[0]
+            current_balance = float(user_data.get('virtual_balance', 100000.0))
 
-    # UPDATE PORTFOLIO
-    if product == 'CNC':
-        holding_item = next((h for h in PAPER_STATE['holdings'] if h['symbol'] == symbol), None)
-        if side == 'BUY':
-            if holding_item:
-                old_val = holding_item['qty'] * holding_item['avg']
-                new_val = qty * price
-                holding_item['qty'] += qty
-                holding_item['avg'] = round((old_val + new_val) / holding_item['qty'], 2)
-            else:
-                PAPER_STATE['holdings'].append({
-                    "symbol": symbol, "qty": qty, "avg": price,
-                    "ltp": price, "type": "CNC", "value": order_value, "pnl": 0, "pnl_pct": 0
-                })
-        else: 
-             if holding_item:
-                 holding_item['qty'] -= qty
-                 if holding_item['qty'] <= 0:
-                     PAPER_STATE['holdings'].remove(holding_item)
+            if side == 'BUY':
+                if current_balance < total_value:
+                    return jsonify({"status": "error", "message": f"Insufficient funds. Required: ₹{total_value:.2f}, Available: ₹{current_balance:.2f}"}), 400
+                
+                new_balance = current_balance - total_value
+                
+                # Update user balance
+                supabase.table('users').update({'virtual_balance': new_balance}).eq('email', email).execute()
 
-    else: # MIS
-        if symbol not in PAPER_STATE['positions']:
-            PAPER_STATE['positions'][symbol] = {"qty": 0, "avg": 0}
-        p = PAPER_STATE['positions'][symbol]
-        
-        if side == 'BUY':
-             p['qty'] += qty
-             p['avg'] = price 
-        else: 
-             p['qty'] -= qty
-             p['avg'] = price 
+                # Record transaction
+                supabase.table('transactions').insert({
+                    'user_email': email,
+                    'symbol': symbol,
+                    'order_type': 'BUY',
+                    'quantity': qty,
+                    'price': price
+                }).execute()
 
-    # Sync to Supabase
-    email = data.get('email')
-    if supabase and email:
-        try:
-            supabase.table('users').update({"virtual_balance": PAPER_STATE['funds']}).eq('email', email).execute()
-        except Exception as e:
-            print(f"Failed to sync order balance to Supabase: {e}")
+                # Update portfolio (holdings)
+                port_res = supabase.table('portfolio').select('*').eq('user_email', email).eq('symbol', symbol).execute()
+                if port_res.data:
+                    existing = port_res.data[0]
+                    old_qty = float(existing.get('quantity', 0))
+                    old_avg = float(existing.get('average_price', 0))
+                    new_qty = old_qty + qty
+                    new_avg = (old_qty * old_avg + total_value) / new_qty
+                    
+                    supabase.table('portfolio').update({
+                        'quantity': new_qty,
+                        'average_price': round(new_avg, 2)
+                    }).eq('id', existing['id']).execute()
+                else:
+                    supabase.table('portfolio').insert({
+                        'user_email': email,
+                        'symbol': symbol,
+                        'quantity': qty,
+                        'average_price': price
+                    }).execute()
 
-    return jsonify({"status": "success", "message": "Order Placed"})
+                PAPER_STATE['funds'] = new_balance
+                return jsonify({"status": "success", "message": f"Successfully bought {qty} shares of {symbol}", "new_balance": new_balance}), 200
+
+            elif side == 'SELL':
+                # Check if user has enough quantity of symbol
+                port_res = supabase.table('portfolio').select('*').eq('user_email', email).eq('symbol', symbol).execute()
+                if not port_res.data:
+                    return jsonify({"status": "error", "message": f"You do not own any shares of {symbol}"}), 400
+                
+                existing = port_res.data[0]
+                old_qty = float(existing.get('quantity', 0))
+                if old_qty < qty:
+                    return jsonify({"status": "error", "message": f"Insufficient shares. Owned: {old_qty}, Trying to sell: {qty}"}), 400
+                
+                new_balance = current_balance + total_value
+                new_qty = old_qty - qty
+                
+                # Update user balance
+                supabase.table('users').update({'virtual_balance': new_balance}).eq('email', email).execute()
+
+                # Record transaction
+                supabase.table('transactions').insert({
+                    'user_email': email,
+                    'symbol': symbol,
+                    'order_type': 'SELL',
+                    'quantity': qty,
+                    'price': price
+                }).execute()
+
+                # Update portfolio
+                if new_qty <= 0:
+                    supabase.table('portfolio').delete().eq('id', existing['id']).execute()
+                else:
+                    supabase.table('portfolio').update({
+                        'quantity': new_qty
+                    }).eq('id', existing['id']).execute()
+
+                PAPER_STATE['funds'] = new_balance
+                return jsonify({"status": "success", "message": f"Successfully sold {qty} shares of {symbol}", "new_balance": new_balance}), 200
+
+        else:
+            # Fallback to local memory simulation (PAPER_STATE)
+            if side == 'BUY':
+                if PAPER_STATE['funds'] < total_value:
+                    return jsonify({"status": "error", "message": f"Insufficient Margin. Req: {total_value:.2f}"}), 400
+                PAPER_STATE['funds'] -= total_value
+                
+                # Update holdings
+                holding_item = next((h for h in PAPER_STATE['holdings'] if h['symbol'] == symbol), None)
+                if holding_item:
+                    old_val = holding_item['qty'] * holding_item['avg']
+                    holding_item['qty'] += qty
+                    holding_item['avg'] = round((old_val + total_value) / holding_item['qty'], 2)
+                else:
+                    PAPER_STATE['holdings'].append({
+                        "symbol": symbol, "qty": qty, "avg": price,
+                        "ltp": price, "type": "CNC", "value": total_value, "pnl": 0, "pnl_pct": 0
+                    })
+            else: # SELL
+                holding_item = next((h for h in PAPER_STATE['holdings'] if h['symbol'] == symbol), None)
+                if not holding_item or holding_item['qty'] < qty:
+                    return jsonify({"status": "error", "message": "Insufficient Holdings"}), 400
+                
+                PAPER_STATE['funds'] += total_value
+                holding_item['qty'] -= qty
+                if holding_item['qty'] <= 0:
+                    PAPER_STATE['holdings'].remove(holding_item)
+
+            PAPER_STATE['orders'].append({
+                "time": datetime.now().strftime("%H:%M:%S"),
+                "symbol": symbol, "type": side, "product": product,
+                "qty": qty, "price": price, "status": "COMPLETE"
+            })
+
+            return jsonify({"status": "success", "message": f"Order Executed. New balance: ₹{PAPER_STATE['funds']:.2f}", "new_balance": PAPER_STATE['funds']}), 200
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/square_off', methods=['POST'])
 def square_off():

@@ -311,30 +311,27 @@ const ScreenerDashboard = () => {
     );
 };
 
+const formatForTradingView = (symbol) => {
+    if (!symbol) return "NSE:RELIANCE";
+    let tvSymbol = symbol;
+    if (tvSymbol.endsWith('.NS')) return `NSE:${tvSymbol.replace('.NS', '')}`;
+    if (tvSymbol.endsWith('.BO')) return `BSE:${tvSymbol.replace('.BO', '')}`;
+    if (tvSymbol.includes("FUT") || tvSymbol.includes("CE") || tvSymbol.includes("PE")) {
+        if (tvSymbol.includes("NIFTY")) return "NSE:NIFTY";
+        if (tvSymbol.includes("BANKNIFTY")) return "NSE:BANKNIFTY";
+        return "NSE:NIFTY";
+    }
+    if (tvSymbol === "GOLD 05OCT FUT") return "COMEX:GC1!";
+    return tvSymbol;
+};
+
 const ChartWidget = ({ symbol, onTrade }) => {
     const ref = useRef(null);
     useEffect(() => {
         const tv = window.TradingView;
         if (tv && ref.current) {
             ref.current.id = "tv_" + Math.random().toString(36).substr(2, 9);
-            let tvSymbol = symbol || "RELIANCE";
-            if (tvSymbol.endsWith(".NS")) {
-                tvSymbol = "NSE:" + tvSymbol.replace(".NS", "");
-            } else if (tvSymbol.endsWith(".BO")) {
-                tvSymbol = "BSE:" + tvSymbol.replace(".BO", "");
-            } else if (tvSymbol.includes("FUT") || tvSymbol.includes("CE") || tvSymbol.includes("PE")) {
-                if (tvSymbol.includes("NIFTY")) {
-                    tvSymbol = "NSE:NIFTY";
-                } else if (tvSymbol.includes("BANKNIFTY")) {
-                    tvSymbol = "NSE:BANKNIFTY";
-                } else {
-                    tvSymbol = "NSE:NIFTY";
-                }
-            } else if (tvSymbol === "GOLD 05OCT FUT") {
-                tvSymbol = "COMEX:GC1!";
-            } else {
-                tvSymbol = tvSymbol;
-            }
+            const tvSymbol = formatForTradingView(symbol);
             new tv.widget({ 
                 "autosize": true, 
                 "symbol": tvSymbol, 
@@ -344,6 +341,7 @@ const ChartWidget = ({ symbol, onTrade }) => {
             });
         }
     }, [symbol]);
+
     return (
         <div style={{ width: '100%', height: '100%', position: 'relative' }}>
             <div ref={ref} style={{ width: '100%', height: '100%' }}></div>
@@ -466,7 +464,8 @@ const App = () => {
             const symbolsToFetch = [...watchlist, ...WATCHLIST_DATA.FNO, ...WATCHLIST_DATA.MCX].map(x => x.id);
             const r1 = await fetch('/api/batch_quotes?symbols=' + symbolsToFetch.join(','));
             if (r1.ok) setQtys(await r1.json());
-            const r2 = await fetch('/api/portfolio');
+            const email = localStorage.getItem("user_email") || '';
+            const r2 = await fetch(`/api/portfolio?email=${encodeURIComponent(email)}`);
             if (r2.ok) setPortfolio(await r2.json());
         } catch (e) { }
     };
