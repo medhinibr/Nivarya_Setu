@@ -63,7 +63,7 @@ class QuoteCache:
 
     def get_quotes(self, symbols):
         with self.lock:
-            now = time.time()
+            now = time_mod.time()
             missing_or_expired = []
             for sym in symbols:
                 if not sym:
