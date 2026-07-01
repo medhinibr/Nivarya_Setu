@@ -1,63 +1,80 @@
-# Contributing to Nivarya Setu
+# Contributing Guidelines
 
-We handle code contributions through GitHub Pull Requests. Here is how you can get started.
+We process contributions through GitHub Pull Requests. Please review the following instructions to ensure a clean development and integration workflow.
 
-## Getting Started
+---
 
-### 1. Fork the Repository
-Click on the **Fork** button at the top right of the repository page.
+## Development Workflow
 
-### 2. Clone Your Fork
-Clone your forked repository to your local machine:
+### 1. Fork and Clone
+Fork the repository on GitHub, then clone your fork locally:
 ```bash
-git clone https://github.com/medhinibr/Binance-Trade-Bot.git
-cd Binance-Trade-Bot
+git clone https://github.com/medhinibr/Nivarya_Setu.git
+cd Nivarya_Setu
 ```
 
-### 3. Create a Branch
-Create a new branch for your feature or bug fix:
+### 2. Configure Local Environment
+Set up a Python virtual environment to isolate project dependencies:
 ```bash
-git checkout -b feature/your-feature-name
+python -m venv venv
 ```
-
-### 4. Configuration
-1.  Create a `.env` file in the `src/` directory.
-2.  Add your environment keys (e.g., `FIREBASE_API_KEY=your_key_here`).
-
-### 5. Run the Project
-This project uses a Flask backend and React frontend.
-
-**Terminal:**
-1.  Install dependencies:
-    ```bash
-    pip install -r requirements.txt
+Activate the environment:
+*   **Windows (PowerShell)**:
+    ```powershell
+    .\venv\Scripts\Activate.ps1
     ```
-2.  Start the server:
+*   **macOS/Linux**:
     ```bash
-    python src/app.py
+    source venv/bin/activate
     ```
-3.  Open in browser:
-    http://localhost:5000/
 
-### 6. Make Your Changes
-Implement your feature or fix. Ensure your code follows the project's style guide:
--   **Frontend:** Professional Institutional Dark Theme (Vanilla CSS).
--   **Backend:** Python (PEP 8 standards).
-
-### 7. Commit and Push
+Install the required backend packages:
 ```bash
-git add .
-git commit -m "index file" # Follow the naming convention: "filename file"
-git push origin feature/your-feature-name
+pip install -r requirements.txt
 ```
 
-### 8. Create a Pull Request
-1.  Navigate to the original repository.
-2.  Click on **New Pull Request**.
-3.  Select your feature branch and submit.
+### 3. Environment Secrets
+Create a `.env` file in the root workspace directory with the following variables:
+```env
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_supabase_anon_key
+ENFORCE_MARKET_HOURS=False
+```
 
-## Code Style
--   **HTML/CSS:** Maintain professional design consistency.
--   **JavaScript:** Use React functional components and ES6+ syntax.
--   **Python:** Follow PEP 8 guidelines.
--   **Commits:** Use short, descriptive commit messages followed by "file" as per project guidelines.
+### 4. Running the Project
+Start the local Flask development server:
+```bash
+python src/app.py
+```
+Open your browser and navigate to: `http://127.0.0.1:5000/`
+
+---
+
+## Coding Standards
+
+### Code Style
+*   **Frontend**: Follow clean React functional component design. Maintain the institutional dark-mode aesthetics using custom CSS variables (avoid embedding ad-hoc inline styles).
+*   **Backend**: Adhere to clean Python structures. Follow standard concurrency rules when updating stateful resources.
+
+### Commit Guidelines
+*   All commits must utilize exactly a **two-word technical commit message** (e.g., `integrate auth`, `fix import`, `update readme`).
+*   Ensure that all local tests pass and dependencies compile successfully before submitting a commit.
+
+---
+
+## Pull Request Process
+
+1.  Create a feature branch from the main branch:
+    ```bash
+    git checkout -b feature/your-feature-name
+    ```
+2.  Stage and commit your changes:
+    ```bash
+    git add .
+    git commit -m "technical message"
+    ```
+3.  Push to your fork:
+    ```bash
+    git push origin feature/your-feature-name
+    ```
+4.  Submit a Pull Request from your branch back to the upstream `main` branch.
