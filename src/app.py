@@ -1,14 +1,15 @@
 from flask import Flask, jsonify, request, send_from_directory
 import random
-from datetime import datetime
+from datetime import datetime, time
 import threading
-import time
+import time as time_mod
 import os
 import urllib.request
 import json
 import yfinance as yf
 import pandas as pd
 from supabase import create_client, Client
+import pytz
 
 from dotenv import load_dotenv
 
@@ -694,6 +695,18 @@ def add_funds():
 def place_order():
     try:
         data = request.json
+        
+        # Check market hours if ENFORCE_MARKET_HOURS is True
+        ENFORCE_MARKET_HOURS = os.environ.get('ENFORCE_MARKET_HOURS', 'False').lower() == 'true'
+        if ENFORCE_MARKET_HOURS:
+            ist = pytz.timezone('Asia/Kolkata')
+            now = datetime.now(ist)
+            if now.weekday() >= 5: # 5=Saturday, 6=Sunday
+                return jsonify({"status": "error", "message": "Market is currently closed. Please place orders between 9:15 AM and 3:30 PM on weekdays."}), 400
+            current_time = now.time()
+            if current_time < time(9, 15) or current_time > time(15, 30):
+                return jsonify({"status": "error", "message": "Market is currently closed. Please place orders between 9:15 AM and 3:30 PM on weekdays."}), 400
+
         email = data.get('email')
         symbol = data.get('symbol')
         side = (data.get('order_type') or data.get('side') or 'BUY').upper()
@@ -866,6 +879,234 @@ def test_db():
         return jsonify({"status": "success", "data": response.data})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
+
+# In-memory watchlist fallback dictionary
+PAPER_WATCHLISTS = {}
+
+TOP_STOCKS = [
+    'RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'SBIN.NS',
+    'ICICIBANK.NS', 'BHARTIARTL.NS', 'ITC.NS', 'LT.NS', 'HINDUNILVR.NS',
+    'MARUTI.NS', 'SUNPHARMA.NS', 'TATAMOTORS.NS', 'ONGC.NS', 'ADANIENT.NS',
+    'AXISBANK.NS', 'NTPC.NS', 'KOTAKBANK.NS', 'COALINDIA.NS', 'M&M.NS'
+]
+
+@app.route('/api/watchlist', methods=['GET'])
+def get_watchlist():
+    email = request.args.get('email')
+    if supabase and email:
+        try:
+            res = supabase.table('watchlist').select('*').eq('user_email', email).execute()
+            if not res.data:
+                # Insert default watchlist
+                defaults = ['RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'SBIN.NS']
+                to_insert = [{'user_email': email, 'symbol': sym} for sym in defaults]
+                supabase.table('watchlist').insert(to_insert).execute()
+                res = supabase.table('watchlist').select('*').eq('user_email', email).execute()
+            
+            result = []
+            name_map = {
+                'RELIANCE.NS': 'Reliance Industries',
+                'TCS.NS': 'TCS',
+                'HDFCBANK.NS': 'HDFC Bank',
+                'INFY.NS': 'Infosys',
+                'SBIN.NS': 'SBI',
+                'NIFTY 25OCT FUT': 'NIFTY FUT',
+                'BANKNIFTY 25OCT FUT': 'BANKNIFTY FUT',
+                'GOLD 05OCT FUT': 'GOLD'
+            }
+            for item in res.data:
+                sym = item.get('symbol')
+                name = name_map.get(sym, sym.split('.')[0] if '.' in sym else sym)
+                result.append({
+                    "id": sym,
+                    "n": name,
+                    "def": 100
+                })
+            return jsonify(result)
+        except Exception as e:
+            print(f"Error fetching watchlist: {e}")
+    
+    # Fallback to local memory / default
+    email_key = email or 'default'
+    if email_key not in PAPER_WATCHLISTS:
+        PAPER_WATCHLISTS[email_key] = ['RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'SBIN.NS']
+    
+    result = []
+    name_map = {
+        'RELIANCE.NS': 'Reliance Industries',
+        'TCS.NS': 'TCS',
+        'HDFCBANK.NS': 'HDFC Bank',
+        'INFY.NS': 'Infosys',
+        'SBIN.NS': 'SBI',
+        'NIFTY 25OCT FUT': 'NIFTY FUT',
+        'BANKNIFTY 25OCT FUT': 'BANKNIFTY FUT',
+        'GOLD 05OCT FUT': 'GOLD'
+    }
+    for sym in PAPER_WATCHLISTS[email_key]:
+        name = name_map.get(sym, sym.split('.')[0] if '.' in sym else sym)
+        result.append({
+            "id": sym,
+            "n": name,
+            "def": 100
+        })
+    return jsonify(result)
+
+@app.route('/api/watchlist/add', methods=['POST'])
+def add_watchlist():
+    try:
+        data = request.json
+        email = data.get('email')
+        symbol = data.get('symbol')
+        if not symbol:
+            return jsonify({"status": "error", "message": "Symbol is required"}), 400
+            
+        if supabase and email:
+            # Check if already exists
+            exist = supabase.table('watchlist').select('*').eq('user_email', email).eq('symbol', symbol).execute()
+            if not exist.data:
+                supabase.table('watchlist').insert({
+                    'user_email': email,
+                    'symbol': symbol
+                }).execute()
+            return jsonify({"status": "success"})
+        
+        # Fallback
+        email_key = email or 'default'
+        if email_key not in PAPER_WATCHLISTS:
+            PAPER_WATCHLISTS[email_key] = ['RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'SBIN.NS']
+        if symbol not in PAPER_WATCHLISTS[email_key]:
+            PAPER_WATCHLISTS[email_key].append(symbol)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        print(f"Error adding to watchlist: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/watchlist/remove', methods=['POST'])
+def remove_watchlist():
+    try:
+        data = request.json
+        email = data.get('email')
+        symbol = data.get('symbol')
+        if not symbol:
+            return jsonify({"status": "error", "message": "Symbol is required"}), 400
+            
+        if supabase and email:
+            supabase.table('watchlist').delete().eq('user_email', email).eq('symbol', symbol).execute()
+            return jsonify({"status": "success"})
+        
+        # Fallback
+        email_key = email or 'default'
+        if email_key not in PAPER_WATCHLISTS:
+            PAPER_WATCHLISTS[email_key] = ['RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'SBIN.NS']
+        if symbol in PAPER_WATCHLISTS[email_key]:
+            PAPER_WATCHLISTS[email_key].remove(symbol)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        print(f"Error removing from watchlist: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/market_action', methods=['GET'])
+def get_market_action():
+    try:
+        quotes = quote_cache.get_quotes(TOP_STOCKS)
+        stock_list = []
+        for sym, d in quotes.items():
+            stock_list.append({
+                "symbol": sym,
+                "name": sym.replace(".NS", ""),
+                "price": d.get("price", 0.0),
+                "change": d.get("change", 0.0)
+            })
+        # Sort by change descending
+        sorted_stocks = sorted(stock_list, key=lambda x: x['change'])
+        gainers = sorted_stocks[-5:][::-1]
+        losers = sorted_stocks[:5]
+        return jsonify({
+            "gainers": gainers,
+            "losers": losers
+        })
+    except Exception as e:
+        print(f"Error getting market action: {e}")
+        return jsonify({"gainers": [], "losers": []})
+
+@app.route('/api/leaderboard', methods=['GET'])
+def get_leaderboard():
+    if supabase:
+        try:
+            # Fetch all users
+            users_res = supabase.table('users').select('email', 'name', 'virtual_balance').execute()
+            # Fetch all portfolios
+            port_res = supabase.table('portfolio').select('user_email', 'symbol', 'quantity').execute()
+            
+            portfolios = {}
+            all_symbols = set()
+            for p in port_res.data:
+                email = p.get('user_email')
+                sym = p.get('symbol')
+                qty = float(p.get('quantity', 0))
+                if qty > 0:
+                    if email not in portfolios:
+                        portfolios[email] = []
+                    portfolios[email].append({"symbol": sym, "qty": qty})
+                    all_symbols.add(sym)
+            
+            # Get quotes for all symbols
+            quotes = quote_cache.get_quotes(list(all_symbols)) if all_symbols else {}
+            
+            leaderboard = []
+            for u in users_res.data:
+                email = u.get('email')
+                name = u.get('name') or email.split('@')[0]
+                balance = float(u.get('virtual_balance', 100000.0))
+                
+                holdings_value = 0.0
+                if email in portfolios:
+                    for h in portfolios[email]:
+                        sym = h['symbol']
+                        ltp = quotes.get(sym, {}).get('price', 0.0)
+                        holdings_value += h['qty'] * ltp
+                
+                net_worth = balance + holdings_value
+                leaderboard.append({
+                    "name": name,
+                    "net_worth": round(net_worth, 2)
+                })
+            
+            # Sort and rank
+            leaderboard.sort(key=lambda x: x['net_worth'], reverse=True)
+            ranked = []
+            for rank, item in enumerate(leaderboard[:10], 1):
+                ranked.append({
+                    "rank": rank,
+                    "name": item['name'],
+                    "net_worth": item['net_worth']
+                })
+            return jsonify(ranked)
+        except Exception as e:
+            print(f"Error calculating leaderboard: {e}")
+    
+    # Fallback mock leaderboard
+    try:
+        demo_net_worth = PAPER_STATE['funds'] + sum(
+            h['qty'] * quote_cache.get_quotes([h['symbol']]).get(h['symbol'], {}).get('price', h['avg'])
+            for h in PAPER_STATE['holdings']
+        )
+    except Exception:
+        demo_net_worth = 100000.0
+
+    mock_data = [
+        {"rank": 1, "name": "Vijay Kedia (Mock)", "net_worth": 182430.50},
+        {"rank": 2, "name": "Rakesh J. (Mock)", "net_worth": 154320.00},
+        {"rank": 3, "name": "Radhakishan D. (Mock)", "net_worth": 125890.20},
+        {"rank": 4, "name": "Demo User (You)", "net_worth": round(demo_net_worth, 2)},
+        {"rank": 5, "name": "Nikhil Kamath (Mock)", "net_worth": 98500.00},
+        {"rank": 6, "name": "Porinju V. (Mock)", "net_worth": 92100.40}
+    ]
+    # Re-sort because Demo User might have more
+    mock_data.sort(key=lambda x: x['net_worth'], reverse=True)
+    for idx, item in enumerate(mock_data, 1):
+        item['rank'] = idx
+    return jsonify(mock_data[:10])
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

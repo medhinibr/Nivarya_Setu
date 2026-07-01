@@ -464,6 +464,83 @@ const WATCHLIST_DATA = {
     MCX: [{ id: 'GOLD 05OCT FUT', n: 'GOLD', def: 59500 }], CDS: []
 };
 
+const LeaderboardDashboard = () => {
+    const [leaderboard, setLeaderboard] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchLeaderboard = async () => {
+        try {
+            setLoading(true);
+            const res = await fetch('/api/leaderboard');
+            if (res.ok) {
+                setLeaderboard(await res.json());
+            }
+        } catch (e) {
+            console.error("Failed to fetch leaderboard", e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchLeaderboard();
+    }, []);
+
+    return (
+        <div style={{ padding: '40px', height: '100%', overflow: 'auto' }}>
+            <div className="flex-between" style={{ marginBottom: '32px' }}>
+                <div>
+                    <h1 style={{ fontSize: '32px', fontWeight: '900', marginBottom: '8px' }}>Global Leaderboard</h1>
+                    <p style={{ color: 'var(--text-light)', fontSize: '14px' }}>Compete with top traders based on real-time net worth.</p>
+                </div>
+                <button className="nav-item active" style={{ padding: '8px 16px' }} onClick={fetchLeaderboard}>
+                    <i className="fas fa-sync" style={{ marginRight: '6px' }} /> Refresh
+                </button>
+            </div>
+
+            <div style={{ background: 'var(--bg-panel)', borderRadius: '24px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                        <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border)' }}>
+                            <th style={{ padding: '20px 24px', textAlign: 'center', fontSize: '11px', color: 'var(--text-light)', fontWeight: '600', width: '80px' }}>RANK</th>
+                            <th style={{ padding: '20px 24px', textAlign: 'left', fontSize: '11px', color: 'var(--text-light)', fontWeight: '600' }}>TRADER</th>
+                            <th style={{ padding: '20px 24px', textAlign: 'right', fontSize: '11px', color: 'var(--text-light)', fontWeight: '600' }}>NET WORTH</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {loading ? (
+                            <tr><td colSpan="3"><EmptyState icon="fa-spinner fa-spin" text="Calculating leaderboard..." /></td></tr>
+                        ) : leaderboard.length === 0 ? (
+                            <tr><td colSpan="3"><EmptyState icon="fa-trophy" text="No rankings available." /></td></tr>
+                        ) : (
+                            leaderboard.map(item => {
+                                const isSelf = item.name.includes("You") || item.name === localStorage.getItem("user_name");
+                                return (
+                                    <tr key={item.rank} style={{ 
+                                        borderBottom: '1px solid var(--border)',
+                                        background: isSelf ? 'rgba(0, 208, 156, 0.03)' : 'transparent',
+                                        fontWeight: isSelf ? '700' : '400'
+                                    }}>
+                                        <td style={{ padding: '20px 24px', textAlign: 'center', fontFamily: 'var(--font-mono)' }}>
+                                            {item.rank}
+                                        </td>
+                                        <td style={{ padding: '20px 24px', fontSize: '14px', color: isSelf ? 'var(--green)' : '#fff' }}>
+                                            {item.name} {isSelf && <span className="badge" style={{ background: 'rgba(0, 208, 156, 0.1)', color: 'var(--green)', marginLeft: '8px' }}>YOU</span>}
+                                        </td>
+                                        <td style={{ padding: '20px 24px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '15px' }}>
+                                            ₹{item.net_worth.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </td>
+                                    </tr>
+                                );
+                            })
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+};
+
 const App = () => {
     const [view, setView] = useState(localStorage.getItem('auth') ? 'APP' : 'LANDING');
     const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')));
@@ -475,11 +552,10 @@ const App = () => {
     const [toasts, setToasts] = useState([]);
     const [profileMenu, setProfileMenu] = useState(false);
 
-    // Watchlist & Search States
-    const [watchlist, setWatchlist] = useState(() => {
-        const saved = localStorage.getItem('watchlist');
-        return saved ? JSON.parse(saved) : WATCHLIST_DATA.EQUITY;
-    });
+    // Watchlist, Market Action & Search States
+    const [watchlist, setWatchlist] = useState([]);
+    const [marketAction, setMarketAction] = useState({ gainers: [], losers: [] });
+    const [actionTab, setActionTab] = useState('GAINERS');
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
@@ -488,19 +564,61 @@ const App = () => {
     const handleAuth = (u) => { localStorage.setItem('auth', 'true'); localStorage.setItem('user', JSON.stringify(u)); setUser(u); setView('APP'); addToast('success', 'Logged In', `Hello, ${u.name}`); };
     const logout = () => { localStorage.clear(); setView('LANDING'); };
 
+    const fetchWatchlist = async () => {
+        try {
+            const email = localStorage.getItem("user_email") || '';
+            const res = await fetch(`/api/watchlist?email=${encodeURIComponent(email)}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.length > 0) {
+                    setWatchlist(data);
+                } else {
+                    setWatchlist(WATCHLIST_DATA.EQUITY);
+                }
+            } else {
+                setWatchlist(WATCHLIST_DATA.EQUITY);
+            }
+        } catch (e) {
+            setWatchlist(WATCHLIST_DATA.EQUITY);
+        }
+    };
+
+    const fetchMarketAction = async () => {
+        try {
+            const res = await fetch('/api/market_action');
+            if (res.ok) {
+                setMarketAction(await res.json());
+            }
+        } catch (e) {}
+    };
+
     const refresh = async () => {
         if (view !== 'APP') return;
         try {
-            const symbolsToFetch = [...watchlist, ...WATCHLIST_DATA.FNO, ...WATCHLIST_DATA.MCX].map(x => x.id);
-            const r1 = await fetch('/api/batch_quotes?symbols=' + symbolsToFetch.join(','));
-            if (r1.ok) setQtys(await r1.json());
+            const currentWatchlist = watchlist.length > 0 ? watchlist : WATCHLIST_DATA.EQUITY;
+            const symbolsToFetch = [...currentWatchlist, ...WATCHLIST_DATA.FNO, ...WATCHLIST_DATA.MCX].map(x => x.id);
+            if (symbolsToFetch.length > 0) {
+                const r1 = await fetch('/api/batch_quotes?symbols=' + symbolsToFetch.join(','));
+                if (r1.ok) setQtys(await r1.json());
+            }
             const email = localStorage.getItem("user_email") || '';
             const r2 = await fetch(`/api/portfolio?email=${encodeURIComponent(email)}`);
             if (r2.ok) setPortfolio(await r2.json());
         } catch (e) { }
     };
 
-    useEffect(() => { refresh(); const t = setInterval(refresh, 5000); return () => clearInterval(t); }, [view, watchlist]);
+    useEffect(() => {
+        if (view === 'APP') {
+            fetchWatchlist();
+            fetchMarketAction();
+        }
+    }, [view]);
+
+    useEffect(() => {
+        refresh();
+        const t = setInterval(refresh, 5000);
+        return () => clearInterval(t);
+    }, [view, watchlist]);
 
     // Debounce search effect
     useEffect(() => {
@@ -563,7 +681,7 @@ const App = () => {
                     </div>
                 </div>
                 <div className="nav">
-                    {['TRADE', 'INVEST', 'ORDERS', 'HOLDINGS', 'POSITIONS', 'SCREENER'].map(t => (
+                    {['TRADE', 'INVEST', 'ORDERS', 'HOLDINGS', 'POSITIONS', 'SCREENER', 'LEADERBOARD'].map(t => (
                         <div key={t} className={`nav-item ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>{t}</div>
                     ))}
                 </div>
@@ -621,6 +739,14 @@ const App = () => {
                                                         const updated = [...watchlist, { id: res.symbol, n: res.name, def: 100 }];
                                                         setWatchlist(updated);
                                                         localStorage.setItem('watchlist', JSON.stringify(updated));
+                                                        
+                                                        // Sync to cloud
+                                                        const email = localStorage.getItem("user_email") || '';
+                                                        fetch('/api/watchlist/add', {
+                                                            method: 'POST',
+                                                            headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({ email, symbol: res.symbol })
+                                                        }).catch(err => console.error(err));
                                                     }
                                                     setSymbol(res.symbol);
                                                     setSearchQuery('');
@@ -660,6 +786,15 @@ const App = () => {
                                                 const updated = watchlist.filter(x => x.id !== w.id);
                                                 setWatchlist(updated);
                                                 localStorage.setItem('watchlist', JSON.stringify(updated));
+                                                
+                                                // Sync to cloud
+                                                const email = localStorage.getItem("user_email") || '';
+                                                fetch('/api/watchlist/remove', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ email, symbol: w.id })
+                                                }).catch(err => console.error(err));
+
                                                 if (symbol === w.id) {
                                                     setSymbol(updated[0]?.id || 'RELIANCE.NS');
                                                 }
@@ -683,6 +818,79 @@ const App = () => {
                                     )}
                                 </div>
                             ))}
+                        </div>
+                        
+                        {/* Market Action Today */}
+                        <div style={{ padding: '20px 24px', borderTop: '1px solid var(--border)', background: 'rgba(255,255,255,0.01)' }}>
+                            <div className="flex-between" style={{ marginBottom: '16px' }}>
+                                <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-light)', letterSpacing: '0.5px' }}>MARKET ACTION</span>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button 
+                                        onClick={() => setActionTab('GAINERS')} 
+                                        className="badge" 
+                                        style={{ 
+                                            background: actionTab === 'GAINERS' ? 'rgba(0, 208, 156, 0.15)' : 'transparent', 
+                                            color: actionTab === 'GAINERS' ? 'var(--green)' : 'var(--text-light)',
+                                            border: actionTab === 'GAINERS' ? '1px solid var(--green)' : '1px solid transparent',
+                                            cursor: 'pointer',
+                                            padding: '4px 8px'
+                                        }}
+                                    >
+                                        Gainers
+                                    </button>
+                                    <button 
+                                        onClick={() => setActionTab('LOSERS')} 
+                                        className="badge" 
+                                        style={{ 
+                                            background: actionTab === 'LOSERS' ? 'rgba(235, 91, 60, 0.15)' : 'transparent', 
+                                            color: actionTab === 'LOSERS' ? 'var(--red)' : 'var(--text-light)',
+                                            border: actionTab === 'LOSERS' ? '1px solid var(--red)' : '1px solid transparent',
+                                            cursor: 'pointer',
+                                            padding: '4px 8px'
+                                        }}
+                                    >
+                                        Losers
+                                    </button>
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                {(actionTab === 'GAINERS' ? marketAction.gainers : marketAction.losers)?.map(stock => (
+                                    <div 
+                                        key={stock.symbol} 
+                                        onClick={() => setSymbol(stock.symbol)}
+                                        style={{ 
+                                            display: 'flex', 
+                                            justifyContent: 'space-between', 
+                                            alignItems: 'center', 
+                                            cursor: 'pointer', 
+                                            padding: '8px', 
+                                            borderRadius: '8px', 
+                                            background: 'rgba(255,255,255,0.01)',
+                                            border: '1px solid transparent',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onMouseEnter={e => {
+                                            e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                                            e.currentTarget.style.borderColor = 'var(--border)';
+                                        }}
+                                        onMouseLeave={e => {
+                                            e.currentTarget.style.background = 'rgba(255,255,255,0.01)';
+                                            e.currentTarget.style.borderColor = 'transparent';
+                                        }}
+                                    >
+                                        <div>
+                                            <div style={{ fontWeight: '700', fontSize: '12px' }}>{stock.symbol.replace('.NS', '')}</div>
+                                            <div style={{ fontSize: '9px', color: 'var(--text-light)', marginTop: '2px' }}>{stock.symbol}</div>
+                                        </div>
+                                        <div style={{ textAlign: 'right' }}>
+                                            <div style={{ fontWeight: '600', fontSize: '12px' }}>₹{stock.price.toFixed(2)}</div>
+                                            <div style={{ fontSize: '10px', fontWeight: '700', marginTop: '2px' }} className={actionTab === 'GAINERS' ? 'text-up' : 'text-down'}>
+                                                {actionTab === 'GAINERS' ? '+' : ''}{stock.change.toFixed(2)}%
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 )}
@@ -932,6 +1140,8 @@ const App = () => {
                             </div>
                         </div>
                     )}
+
+                    {tab === 'LEADERBOARD' && <LeaderboardDashboard />}
                 </div>
             </div>
         </div>

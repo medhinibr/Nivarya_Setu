@@ -8,6 +8,10 @@ Nivarya Setu is an institutional-grade, zero-cost paper trading simulation platf
 
 *   **First Impression Landing Page**: An introductory landing page with a hero section ("Master the Stock Market without losing Real Money"), Call to Action (CTA) button, and detailed features cards.
 *   **Top Ticker Tape**: A persistent running ticker at the top of the interface displaying real-time points and green/red percentage changes for indices like NIFTY 50, SENSEX, and BANKNIFTY.
+*   **Real Market Hours & Holidays**: Restricts order placement to Indian Standard Time (IST) market hours (9:15 AM to 3:30 PM on weekdays). This behavior is controlled dynamically via the `ENFORCE_MARKET_HOURS` configuration.
+*   **Cloud Watchlist Sync**: Integrates watchlist tracking with the database. Watchlist modifications (addition or deletion of symbols) are persisted in the cloud under the user's registered account.
+*   **Market Action Discovery**: Periodically aggregates price changes for representative NIFTY 50 securities and displays the top 5 gainers and top 5 losers. Users can select any gainer or loser to update the technical chart.
+*   **Global Leaderboard**: Implements leaderboard rankings computed from user net worth (cash balance combined with the current value of stock holdings). Falls back to mock stock market legends if Supabase is offline.
 *   **100% Free & Keyless Integration**: Uses the `yfinance` API to retrieve live stock price quotes without requiring paid subscriptions, bank accounts, or API keys.
 *   **Intelligent In-Memory Caching (`QuoteCache`)**: Implements a thread-safe caching system in Flask with a 15-second Time-To-Live (TTL) to optimize performance, prevent rate limiting, and provide rapid responses to the client.
 *   **Global Autocomplete Search**: Interactive search bar that queries Yahoo Finance's autocomplete API in real-time, allowing users to discover and add any global stock, index, ETF, or mutual fund.
