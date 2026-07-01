@@ -1108,6 +1108,76 @@ def get_leaderboard():
         item['rank'] = idx
     return jsonify(mock_data[:10])
 
+# 1. SIGNUP API (Hosa account create maadoke)
+@app.route('/api/signup', methods=['POST'])
+def signup():
+    try:
+        data = request.json
+        email = data.get('email')
+        password = data.get('password')
+        if not email or not password:
+            return jsonify({"error": "Email and password are required"}), 400
+
+        if supabase:
+            # Supabase Auth alli user create maadthivi
+            auth_response = supabase.auth.sign_up({
+                "email": email, 
+                "password": password
+            })
+            
+            # Account create aada koodley 1 Lakh money users table ge haakthivi
+            supabase.table('users').insert({
+                "email": email,
+                "virtual_balance": 100000
+            }).execute()
+        else:
+            # Mock local database check/insert
+            if not hasattr(app, 'local_users'):
+                app.local_users = {}
+            if email in app.local_users:
+                return jsonify({"error": "User already exists"}), 400
+            app.local_users[email] = password
+
+        return jsonify({"message": "Account created successfully! You received ₹1,00,000", "email": email}), 201
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+# 2. LOGIN API (Haleya users login aagoke)
+@app.route('/api/login', methods=['POST'])
+def login():
+    try:
+        data = request.json
+        email = data.get('email')
+        password = data.get('password')
+        if not email or not password:
+            return jsonify({"error": "Email and password are required"}), 400
+
+        if supabase:
+            # Supabase inda password correct idya check maadthivi
+            auth_response = supabase.auth.sign_in_with_password({
+                "email": email, 
+                "password": password
+            })
+            
+            # Password correct idre, avara virtual balance fetch maadu
+            user_res = supabase.table('users').select('*').eq('email', email).execute()
+            balance = user_res.data[0]['virtual_balance'] if user_res.data else 100000.0
+        else:
+            # Mock local database check
+            if not hasattr(app, 'local_users'):
+                app.local_users = {}
+            if email not in app.local_users or app.local_users[email] != password:
+                return jsonify({"error": "Invalid email or password"}), 401
+            balance = 100000.0
+
+        return jsonify({"message": "Login successful", "email": email, "balance": balance}), 200
+
+    except Exception as e:
+        # Password thappu idre error barutte
+        return jsonify({"error": "Invalid email or password"}), 401
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
 

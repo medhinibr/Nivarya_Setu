@@ -202,40 +202,61 @@ const MarketDepth = ({ symbol }) => {
 
 const AuthPage = ({ type, onAuth, onBack }) => {
     const [email, setEmail] = useState('demo@pro.com');
-    const [pass, setPass] = useState('demo123');
+    const [password, setPassword] = useState('demo123');
     const [loading, setLoading] = useState(false);
 
-    const handleGoogleLogin = async () => {
-        if (!window.FirebaseAuth) { alert("Firebase not initialized."); return; }
+    const handleSignup = async () => {
+        if (!email || !password) return alert("Email and Password required!");
         setLoading(true);
         try {
-            const { auth, signInWithPopup, GoogleAuthProvider } = window.FirebaseAuth;
-            const result = await signInWithPopup(auth, new GoogleAuthProvider());
-            onAuth({ name: result.user.displayName, email: result.user.email, photo: result.user.photoURL });
-        } catch (error) { alert("Google sign-in failed: " + error.message); }
-        finally { setLoading(false); }
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault(); setLoading(true);
-        try {
-            const r = await fetch('/api/login', {
+            const response = await fetch('/api/signup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email })
+                body: JSON.stringify({ email, password })
             });
-            const d = await r.json(); setLoading(false);
-            if (r.ok && d.status === 'success') {
-                localStorage.setItem("user_email", d.user.email);
-                localStorage.setItem("virtual_balance", d.user.virtual_balance);
-                alert(`Welcome! Your balance is ₹${parseFloat(d.user.virtual_balance).toLocaleString("en-IN")}`);
-                onAuth(d.user);
+            const data = await response.json();
+            setLoading(false);
+            
+            if (response.ok) {
+                alert(data.message || "Account created successfully! You received ₹1,00,000"); 
+                localStorage.setItem("user_email", data.email);
+                localStorage.setItem("virtual_balance", 100000);
+                localStorage.setItem("auth", "true");
+                localStorage.setItem("user", JSON.stringify({ email: data.email, name: data.email.split('@')[0] }));
+                window.location.reload(); 
             } else {
-                alert("Error: " + (d.message || d.error || "Login failed"));
+                alert("Error: " + (data.error || "Signup failed"));
             }
         } catch (error) {
             setLoading(false);
-            console.error("Login failed", error);
+            alert("Connection error: " + error.message);
+        }
+    };
+
+    const handleLogin = async () => {
+        if (!email || !password) return alert("Email and Password required!");
+        setLoading(true);
+        try {
+            const response = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const data = await response.json();
+            setLoading(false);
+            
+            if (response.ok) {
+                alert("Welcome back!");
+                localStorage.setItem("user_email", data.email);
+                localStorage.setItem("virtual_balance", data.balance);
+                localStorage.setItem("auth", "true");
+                localStorage.setItem("user", JSON.stringify({ email: data.email, name: data.email.split('@')[0] }));
+                window.location.reload();
+            } else {
+                alert("Error: " + (data.error || "Login failed"));
+            }
+        } catch (error) {
+            setLoading(false);
             alert("Connection error: " + error.message);
         }
     };
@@ -244,14 +265,42 @@ const AuthPage = ({ type, onAuth, onBack }) => {
         <div className="auth-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#000' }}>
             <div className="auth-card" style={{ background: 'var(--bg-panel)', padding: '40px', borderRadius: '12px', border: '1px solid var(--border)', width: '400px' }}>
                 <button className="nav-item" onClick={onBack} style={{ marginBottom: '20px' }}><i className="fas fa-arrow-left"></i> Home</button>
-                <h2 style={{ fontSize: '24px', marginBottom: '30px', textAlign: 'center' }}>{type === 'LOGIN' ? 'Login' : 'Sign Up'}</h2>
-                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <div><label className="badge" style={{ marginBottom: '8px', display: 'block' }}>Email</label><input className="search-input" type="email" value={email} onChange={e => setEmail(e.target.value)} required style={{ paddingLeft: '15px' }} /></div>
-                    <div><label className="badge" style={{ marginBottom: '8px', display: 'block' }}>Password</label><input className="search-input" type="password" value={pass} onChange={e => setPass(e.target.value)} required style={{ paddingLeft: '15px' }} /></div>
-                    <button className="landing-btn" disabled={loading} style={{ width: '100%' }}>{loading ? '...' : type}</button>
-                </form>
-                <div style={{ margin: '20px 0', textAlign: 'center', color: 'var(--text-light)', fontSize: '11px' }}>OR</div>
-                <button className="landing-btn" onClick={handleGoogleLogin} style={{ width: '100%', background: '#fff', color: '#000' }}><i className="fab fa-google"></i> Google Login</button>
+                <h2 style={{ fontSize: '24px', marginBottom: '30px', textAlign: 'center' }}>Login / Signup</h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div>
+                        <label className="badge" style={{ marginBottom: '8px', display: 'block' }}>Email</label>
+                        <input 
+                            className="search-input" 
+                            type="email" 
+                            placeholder="Enter your email" 
+                            value={email} 
+                            onChange={e => setEmail(e.target.value)} 
+                            required 
+                            style={{ paddingLeft: '15px' }} 
+                        />
+                    </div>
+                    <div>
+                        <label className="badge" style={{ marginBottom: '8px', display: 'block' }}>Password</label>
+                        <input 
+                            className="search-input" 
+                            type="password" 
+                            placeholder="Enter password (min 6 chars)" 
+                            value={password} 
+                            onChange={e => setPassword(e.target.value)} 
+                            required 
+                            style={{ paddingLeft: '15px' }} 
+                        />
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+                        <button onClick={handleLogin} disabled={loading} className="landing-btn" style={{ flex: 1, background: 'var(--green)', color: '#000' }}>
+                            {loading ? '...' : 'Login'}
+                        </button>
+                        <button onClick={handleSignup} disabled={loading} className="landing-btn" style={{ flex: 1, background: 'rgba(255,255,255,0.05)', color: '#fff' }}>
+                            {loading ? '...' : 'Create Account'}
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     );
