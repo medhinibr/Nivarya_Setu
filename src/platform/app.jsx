@@ -383,10 +383,30 @@ const InvestDashboard = ({ addToast }) => {
     );
 };
 
-const OrderModal = ({ isOpen, type, symbol, price, onClose, onSubmit }) => {
+const OrderModal = ({ isOpen, type, symbol, price, ownedQty = 0, onClose, onSubmit }) => {
     if (!isOpen) return null;
     const [qty, setQty] = useState(1);
     const isBuy = type === 'BUY';
+
+    const handleSetMax = () => {
+        if (!isBuy) {
+            setQty(ownedQty);
+        }
+    };
+
+    const handleFormSubmit = () => {
+        const qtyNum = parseFloat(qty);
+        if (isNaN(qtyNum) || qtyNum <= 0) {
+            alert("Quantity must be a positive number.");
+            return;
+        }
+        if (!isBuy && qtyNum > ownedQty) {
+            alert(`Insufficient holdings. You own ${ownedQty} shares of ${symbol} but tried to sell ${qtyNum}.`);
+            return;
+        }
+        onSubmit({ qty: qtyNum, type: 'MARKET', price });
+    };
+
     return (
         <div className="modal-overlay">
             <div className="modal">
@@ -403,7 +423,17 @@ const OrderModal = ({ isOpen, type, symbol, price, onClose, onSubmit }) => {
                     </div>
 
                     <div style={{ marginBottom: '32px' }}>
-                        <label className="badge" style={{ marginBottom: '12px', display: 'block', width: 'fit-content' }}>QUANTITY (SHARES)</label>
+                        <div className="flex-between" style={{ marginBottom: '12px' }}>
+                            <label className="badge">QUANTITY (SHARES)</label>
+                            {!isBuy && ownedQty > 0 && (
+                                <span 
+                                    style={{ fontSize: '11px', color: 'var(--text-light)', cursor: 'pointer', textDecoration: 'underline' }}
+                                    onClick={handleSetMax}
+                                >
+                                    Max Available: {ownedQty}
+                                </span>
+                            )}
+                        </div>
                         <input className="search-input" type="number" value={qty} onChange={e => setQty(e.target.value)} style={{ paddingLeft: '20px', fontSize: '20px', fontWeight: '800' }} />
                     </div>
 
@@ -419,7 +449,7 @@ const OrderModal = ({ isOpen, type, symbol, price, onClose, onSubmit }) => {
                     </div>
 
                     <div style={{ display: 'flex', gap: '16px' }}>
-                        <button className="landing-btn" style={{ flex: 1, background: isBuy ? 'var(--green)' : 'var(--red)', color: isBuy ? '#000' : '#fff' }} onClick={() => onSubmit({ qty, type: 'MARKET', price })}>Place {type} Order</button>
+                        <button className="landing-btn" style={{ flex: 1, background: isBuy ? 'var(--green)' : 'var(--red)', color: isBuy ? '#000' : '#fff' }} onClick={handleFormSubmit}>Place {type} Order</button>
                         <button className="nav-item" onClick={onClose} style={{ padding: '20px' }}>Dismiss</button>
                     </div>
                 </div>
@@ -501,12 +531,15 @@ const App = () => {
     return (
         <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
             <ToastContainer toasts={toasts} />
-            <OrderModal isOpen={modal.open} type={modal.type} symbol={symbol} price={qtys[symbol]?.price || 0} onClose={() => setModal({ ...modal, open: false })} onSubmit={async (d) => {
+            <OrderModal isOpen={modal.open} type={modal.type} symbol={symbol} price={qtys[symbol]?.price || 0} ownedQty={portfolio.holdings?.find(h => h.symbol === symbol)?.qty || 0} onClose={() => setModal({ ...modal, open: false })} onSubmit={async (d) => {
                 try {
                     const res = await fetch('/api/place_order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ symbol, side: modal.type, email: localStorage.getItem("user_email"), ...d }) });
                     if (res.ok) {
                         const data = await res.json();
                         if (data.status === 'success') {
+                            if (data.new_balance !== undefined) {
+                                localStorage.setItem("virtual_balance", data.new_balance);
+                            }
                             addToast('success', 'Order Executed', `Successfully ${modal.type.toLowerCase()}ed ${d.qty} shares of ${symbol}.`);
                         } else {
                             addToast('error', 'Order Failed', data.message || 'Execution failed.');
@@ -665,30 +698,231 @@ const App = () => {
                     )}
                     {tab === 'INVEST' && <InvestDashboard addToast={addToast} />}
                     {tab === 'SCREENER' && <ScreenerDashboard />}
-                    {['HOLDINGS', 'POSITIONS', 'ORDERS'].includes(tab) && (
-                        <div style={{ padding: '60px', height: '100%', overflow: 'auto' }}>
-                            <h1 style={{ fontSize: '32px', marginBottom: '40px', fontWeight: '800' }}>{tab}</h1>
-                            <div style={{ background: 'var(--bg-panel)', borderRadius: '24px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+                    {tab === 'HOLDINGS' && (
+                        <div style={{ padding: '40px', height: '100%', overflow: 'auto' }}>
+                            {/* Stats Summary Cards */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '32px' }}>
+                                <div style={{ background: 'var(--bg-panel)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-light)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Invested Value</div>
+                                    <div style={{ fontSize: '24px', fontWeight: '800', fontFamily: 'var(--font-mono)' }}>₹{(portfolio.invested_val || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                </div>
+                                <div style={{ background: 'var(--bg-panel)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-light)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Current Value</div>
+                                    <div style={{ fontSize: '24px', fontWeight: '800', fontFamily: 'var(--font-mono)' }}>₹{(portfolio.current_val || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                </div>
+                                <div style={{ background: 'var(--bg-panel)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-light)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total P&L</div>
+                                    <div style={{ fontSize: '24px', fontWeight: '800', fontFamily: 'var(--font-mono)' }} className={(portfolio.total_pnl || 0) >= 0 ? 'text-up' : 'text-down'}>
+                                        {(portfolio.total_pnl || 0) >= 0 ? '+' : ''}₹{(portfolio.total_pnl || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        <span style={{ fontSize: '12px', marginLeft: '6px', opacity: 0.8 }}>
+                                            ({portfolio.invested_val ? (((portfolio.total_pnl || 0) / portfolio.invested_val) * 100).toFixed(2) : '0.00'}%)
+                                        </span>
+                                    </div>
+                                </div>
+                                <div style={{ background: 'var(--bg-panel)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-light)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Today's P&L</div>
+                                    <div style={{ fontSize: '24px', fontWeight: '800', fontFamily: 'var(--font-mono)' }} className={(portfolio.today_pnl || 0) >= 0 ? 'text-up' : 'text-down'}>
+                                        {(portfolio.today_pnl || 0) >= 0 ? '+' : ''}₹{(portfolio.today_pnl || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        <span style={{ fontSize: '12px', marginLeft: '6px', opacity: 0.8 }}>
+                                            ({portfolio.current_val && portfolio.today_pnl ? (((portfolio.today_pnl || 0) / (portfolio.current_val - portfolio.today_pnl)) * 100).toFixed(2) : '0.00'}%)
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Detailed Table */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                <h2 style={{ fontSize: '20px', fontWeight: '800' }}>Holdings ({portfolio.holdings?.length || 0})</h2>
+                                <button className="nav-item active" style={{ padding: '8px 16px' }} onClick={refresh}>
+                                    <i className="fas fa-sync" style={{ marginRight: '6px' }} /> Refresh
+                                </button>
+                            </div>
+
+                            <div style={{ background: 'var(--bg-panel)', borderRadius: '16px', border: '1px solid var(--border)', overflow: 'hidden' }}>
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <thead>
                                         <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border)' }}>
-                                            <th style={{ padding: '20px 30px', textAlign: 'left', fontSize: '11px', color: 'var(--text-light)' }}>INSTRUMENT</th>
-                                            <th style={{ padding: '20px 30px', textAlign: 'left', fontSize: '11px', color: 'var(--text-light)' }}>QTY</th>
-                                            <th style={{ padding: '20px 30px', textAlign: 'left', fontSize: '11px', color: 'var(--text-light)' }}>AVG PRICE</th>
-                                            <th style={{ padding: '20px 30px', textAlign: 'right', fontSize: '11px', color: 'var(--text-light)' }}>P&L (UNREALIZED)</th>
+                                            <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '11px', color: 'var(--text-light)', fontWeight: '600' }}>INSTRUMENT</th>
+                                            <th style={{ padding: '16px 24px', textAlign: 'right', fontSize: '11px', color: 'var(--text-light)', fontWeight: '600' }}>QTY</th>
+                                            <th style={{ padding: '16px 24px', textAlign: 'right', fontSize: '11px', color: 'var(--text-light)', fontWeight: '600' }}>AVG COST</th>
+                                            <th style={{ padding: '16px 24px', textAlign: 'right', fontSize: '11px', color: 'var(--text-light)', fontWeight: '600' }}>LTP</th>
+                                            <th style={{ padding: '16px 24px', textAlign: 'right', fontSize: '11px', color: 'var(--text-light)', fontWeight: '600' }}>CURR. VALUE</th>
+                                            <th style={{ padding: '16px 24px', textAlign: 'right', fontSize: '11px', color: 'var(--text-light)', fontWeight: '600' }}>TOTAL P&L</th>
+                                            <th style={{ padding: '16px 24px', textAlign: 'right', fontSize: '11px', color: 'var(--text-light)', fontWeight: '600' }}>TODAY'S P&L</th>
+                                            <th style={{ padding: '16px 24px', textAlign: 'center', fontSize: '11px', color: 'var(--text-light)', fontWeight: '600' }}>ACTIONS</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {(portfolio[tab.toLowerCase()] || []).length === 0 ? (
-                                            <tr><td colSpan="4"><EmptyState icon="fa-box-open" text={`No ${tab.toLowerCase()} found.`} /></td></tr>
+                                        {(portfolio.holdings || []).length === 0 ? (
+                                            <tr><td colSpan="8"><EmptyState icon="fa-box-open" text="No holdings found in your Demat account." /></td></tr>
                                         ) : (
-                                            (portfolio[tab.toLowerCase()] || []).map((p, i) => (
+                                            portfolio.holdings.map((h, i) => (
                                                 <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
-                                                    <td style={{ padding: '20px 30px', fontWeight: '700' }}>{p.symbol}</td>
-                                                    <td style={{ padding: '20px 30px' }}>{p.qty}</td>
-                                                    <td style={{ padding: '20px 30px', fontFamily: 'var(--font-mono)' }}>₹{p.avg}</td>
-                                                    <td style={{ padding: '20px 30px', textAlign: 'right', fontWeight: '800', fontFamily: 'var(--font-mono)' }} className={p.pnl >= 0 ? 'text-up' : 'text-down'}>
-                                                        {p.pnl >= 0 ? '+' : ''}{p.pnl.toLocaleString()}
+                                                    <td style={{ padding: '16px 24px' }}>
+                                                        <div style={{ fontWeight: '700', fontSize: '14px' }}>{h.symbol}</div>
+                                                        <div style={{ fontSize: '10px', color: 'var(--text-light)', marginTop: '2px' }}>CNC Equity</div>
+                                                    </td>
+                                                    <td style={{ padding: '16px 24px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: '600' }}>{h.qty}</td>
+                                                    <td style={{ padding: '16px 24px', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>₹{h.avg.toFixed(2)}</td>
+                                                    <td style={{ padding: '16px 24px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: '600' }}>₹{h.ltp.toFixed(2)}</td>
+                                                    <td style={{ padding: '16px 24px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: '600' }}>₹{h.value.toFixed(2)}</td>
+                                                    <td style={{ padding: '16px 24px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: '700' }} className={h.pnl >= 0 ? 'text-up' : 'text-down'}>
+                                                        <div>{h.pnl >= 0 ? '+' : ''}₹{h.pnl.toFixed(2)}</div>
+                                                        <div style={{ fontSize: '10px', marginTop: '2px' }}>({h.pnl_pct >= 0 ? '+' : ''}{h.pnl_pct.toFixed(2)}%)</div>
+                                                    </td>
+                                                    <td style={{ padding: '16px 24px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: '700' }} className={(h.day_pnl || 0) >= 0 ? 'text-up' : 'text-down'}>
+                                                        <div>{(h.day_pnl || 0) >= 0 ? '+' : ''}₹{(h.day_pnl || 0).toFixed(2)}</div>
+                                                        <div style={{ fontSize: '10px', marginTop: '2px' }}>({(h.day_change || 0) >= 0 ? '+' : ''}{(h.day_change || 0).toFixed(2)}%)</div>
+                                                    </td>
+                                                    <td style={{ padding: '16px 24px', textAlign: 'center' }}>
+                                                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                                                            <button 
+                                                                className="landing-btn" 
+                                                                style={{ padding: '6px 12px', fontSize: '11px', borderRadius: '6px', background: 'rgba(0, 208, 156, 0.1)', color: 'var(--green)' }}
+                                                                onClick={() => {
+                                                                    setSymbol(h.symbol);
+                                                                    setModal({ open: true, type: 'BUY' });
+                                                                }}
+                                                            >
+                                                                Add
+                                                            </button>
+                                                            <button 
+                                                                className="landing-btn" 
+                                                                style={{ padding: '6px 12px', fontSize: '11px', borderRadius: '6px', background: 'rgba(235, 91, 60, 0.1)', color: 'var(--red)' }}
+                                                                onClick={() => {
+                                                                    setSymbol(h.symbol);
+                                                                    setModal({ open: true, type: 'SELL' });
+                                                                }}
+                                                            >
+                                                                Exit
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {tab === 'POSITIONS' && (
+                        <div style={{ padding: '40px', height: '100%', overflow: 'auto' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                <h2 style={{ fontSize: '20px', fontWeight: '800' }}>Active Positions ({portfolio.positions?.length || 0})</h2>
+                                <button className="nav-item active" style={{ padding: '8px 16px' }} onClick={refresh}>
+                                    <i className="fas fa-sync" style={{ marginRight: '6px' }} /> Refresh
+                                </button>
+                            </div>
+                            <div style={{ background: 'var(--bg-panel)', borderRadius: '16px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead>
+                                        <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border)' }}>
+                                            <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '11px', color: 'var(--text-light)', fontWeight: '600' }}>INSTRUMENT</th>
+                                            <th style={{ padding: '16px 24px', textAlign: 'right', fontSize: '11px', color: 'var(--text-light)', fontWeight: '600' }}>QTY</th>
+                                            <th style={{ padding: '16px 24px', textAlign: 'right', fontSize: '11px', color: 'var(--text-light)', fontWeight: '600' }}>AVG PRICE</th>
+                                            <th style={{ padding: '16px 24px', textAlign: 'right', fontSize: '11px', color: 'var(--text-light)', fontWeight: '600' }}>LTP</th>
+                                            <th style={{ padding: '16px 24px', textAlign: 'right', fontSize: '11px', color: 'var(--text-light)', fontWeight: '600' }}>P&L (MTM)</th>
+                                            <th style={{ padding: '16px 24px', textAlign: 'center', fontSize: '11px', color: 'var(--text-light)', fontWeight: '600' }}>PRODUCT</th>
+                                            <th style={{ padding: '16px 24px', textAlign: 'center', fontSize: '11px', color: 'var(--text-light)', fontWeight: '600' }}>ACTIONS</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {(portfolio.positions || []).length === 0 ? (
+                                            <tr><td colSpan="7"><EmptyState icon="fa-box-open" text="No active intraday positions." /></td></tr>
+                                        ) : (
+                                            portfolio.positions.map((p, i) => (
+                                                <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                                                    <td style={{ padding: '16px 24px', fontWeight: '700', fontSize: '14px' }}>{p.symbol}</td>
+                                                    <td style={{ padding: '16px 24px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: '600' }} className={p.qty >= 0 ? 'text-up' : 'text-down'}>{p.qty}</td>
+                                                    <td style={{ padding: '16px 24px', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>₹{p.avg.toFixed(2)}</td>
+                                                    <td style={{ padding: '16px 24px', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>₹{p.ltp.toFixed(2)}</td>
+                                                    <td style={{ padding: '16px 24px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: '700' }} className={p.pnl >= 0 ? 'text-up' : 'text-down'}>
+                                                        {p.pnl >= 0 ? '+' : ''}₹{p.pnl.toFixed(2)}
+                                                    </td>
+                                                    <td style={{ padding: '16px 24px', textAlign: 'center' }}>
+                                                        <span className="badge">{p.product}</span>
+                                                    </td>
+                                                    <td style={{ padding: '16px 24px', textAlign: 'center' }}>
+                                                        <button 
+                                                            className="landing-btn" 
+                                                            style={{ padding: '6px 12px', fontSize: '11px', borderRadius: '6px', background: 'rgba(235, 91, 60, 0.1)', color: 'var(--red)' }}
+                                                            onClick={async () => {
+                                                                if (confirm(`Are you sure you want to square off your position in ${p.symbol}?`)) {
+                                                                    try {
+                                                                        const r = await fetch('/api/square_off', {
+                                                                            method: 'POST',
+                                                                            headers: { 'Content-Type': 'application/json' },
+                                                                            body: JSON.stringify({ symbol: p.symbol })
+                                                                        });
+                                                                        if (r.ok) {
+                                                                            addToast('success', 'Position Squared Off', `Successfully squared off ${p.symbol}.`);
+                                                                            refresh();
+                                                                        }
+                                                                    } catch (e) {
+                                                                        addToast('error', 'Action Failed', 'Failed to square off position.');
+                                                                    }
+                                                                }
+                                                            }}
+                                                        >
+                                                            Square Off
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {tab === 'ORDERS' && (
+                        <div style={{ padding: '40px', height: '100%', overflow: 'auto' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                <h2 style={{ fontSize: '20px', fontWeight: '800' }}>Order Book ({portfolio.orders?.length || 0})</h2>
+                                <button className="nav-item active" style={{ padding: '8px 16px' }} onClick={refresh}>
+                                    <i className="fas fa-sync" style={{ marginRight: '6px' }} /> Refresh
+                                </button>
+                            </div>
+                            <div style={{ background: 'var(--bg-panel)', borderRadius: '16px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead>
+                                        <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border)' }}>
+                                            <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '11px', color: 'var(--text-light)', fontWeight: '600' }}>TIME</th>
+                                            <th style={{ padding: '16px 24px', textAlign: 'center', fontSize: '11px', color: 'var(--text-light)', fontWeight: '600' }}>TYPE</th>
+                                            <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '11px', color: 'var(--text-light)', fontWeight: '600' }}>INSTRUMENT</th>
+                                            <th style={{ padding: '16px 24px', textAlign: 'center', fontSize: '11px', color: 'var(--text-light)', fontWeight: '600' }}>PRODUCT</th>
+                                            <th style={{ padding: '16px 24px', textAlign: 'right', fontSize: '11px', color: 'var(--text-light)', fontWeight: '600' }}>QTY</th>
+                                            <th style={{ padding: '16px 24px', textAlign: 'right', fontSize: '11px', color: 'var(--text-light)', fontWeight: '600' }}>PRICE</th>
+                                            <th style={{ padding: '16px 24px', textAlign: 'center', fontSize: '11px', color: 'var(--text-light)', fontWeight: '600' }}>STATUS</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {(portfolio.orders || []).length === 0 ? (
+                                            <tr><td colSpan="7"><EmptyState icon="fa-history" text="No orders placed today." /></td></tr>
+                                        ) : (
+                                            portfolio.orders.map((o, i) => (
+                                                <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                                                    <td style={{ padding: '16px 24px', color: 'var(--text-light)', fontFamily: 'var(--font-mono)' }}>{o.time}</td>
+                                                    <td style={{ padding: '16px 24px', textAlign: 'center' }}>
+                                                        <span className="badge" style={{
+                                                            background: o.type === 'BUY' ? 'rgba(0, 208, 156, 0.1)' : 'rgba(235, 91, 60, 0.1)',
+                                                            color: o.type === 'BUY' ? 'var(--green)' : 'var(--red)',
+                                                            fontWeight: '700'
+                                                        }}>
+                                                            {o.type === 'BUY' ? '🟢 BUY' : '🔴 SELL'}
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ padding: '16px 24px', fontWeight: '700', fontSize: '14px' }}>{o.symbol}</td>
+                                                    <td style={{ padding: '16px 24px', textAlign: 'center' }}><span className="badge">{o.product}</span></td>
+                                                    <td style={{ padding: '16px 24px', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{o.qty}</td>
+                                                    <td style={{ padding: '16px 24px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: '600' }}>₹{o.price.toFixed(2)}</td>
+                                                    <td style={{ padding: '16px 24px', textAlign: 'center' }}>
+                                                        <span className="badge" style={{ background: 'rgba(0, 208, 156, 0.08)', color: 'var(--green)' }}>
+                                                            {o.status}
+                                                        </span>
                                                     </td>
                                                 </tr>
                                             ))

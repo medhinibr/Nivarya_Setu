@@ -1,11 +1,13 @@
 # Nivarya Setu: Advanced Stock Market Simulation Platform
 
-Nivarya Setu is an institutional-grade, zero-cost paper trading simulation platform designed for the Indian and global capital markets. It provides a premium, low-latency interface to execute trades, build watchlists, and track simulated portfolios across equities, derivatives, commodities, and mutual funds using real-time market data.
+Nivarya Setu is an institutional-grade, zero-cost paper trading simulation platform designed for capital markets. It provides a premium, low-latency interface to execute trades, build watchlists, and track simulated portfolios across equities, derivatives, commodities, and mutual funds using real-time market data.
 
 ---
 
-## 🚀 Key Features
+## Key Features
 
+*   **First Impression Landing Page**: An introductory landing page with a hero section ("Master the Stock Market without losing Real Money"), Call to Action (CTA) button, and detailed features cards.
+*   **Top Ticker Tape**: A persistent running ticker at the top of the interface displaying real-time points and green/red percentage changes for indices like NIFTY 50, SENSEX, and BANKNIFTY.
 *   **100% Free & Keyless Integration**: Uses the `yfinance` API to retrieve live stock price quotes without requiring paid subscriptions, bank accounts, or API keys.
 *   **Intelligent In-Memory Caching (`QuoteCache`)**: Implements a thread-safe caching system in Flask with a 15-second Time-To-Live (TTL) to optimize performance, prevent rate limiting, and provide rapid responses to the client.
 *   **Global Autocomplete Search**: Interactive search bar that queries Yahoo Finance's autocomplete API in real-time, allowing users to discover and add any global stock, index, ETF, or mutual fund.
@@ -14,12 +16,22 @@ Nivarya Setu is an institutional-grade, zero-cost paper trading simulation platf
 *   **Virtual Portfolio & Risk Management**:
     *   Starts every user with **₹1,00,000 (1 Lakh)** in virtual cash.
     *   Dynamic margin validations that block orders with insufficient funds.
-    *   Real-time Unrealized P&L, holdings averages, and position tracking.
+*   **Holdings P&L Dashboard**:
+    *   Top stats cards displaying Invested Value, Current Value, Total P&L, and Today's P&L.
+    *   Detailed holdings table including columns for Quantity, Average Cost, LTP, Current Value, Total P&L (absolute and percentage), and Today's P&L.
+    *   Color-coded text values (green for gains, red for losses).
+*   **SELL Engine (Exit Position)**:
+    *   Checks ownership and quantity limits before accepting sell orders.
+    *   Adds proceeds (`Live Price * Sold Shares`) back to the user's cash balance.
+    *   Updates or deletes rows in the portfolio database table depending on remaining quantity.
+*   **Order Book Passbook**:
+    *   A ledger showing all historical transactions with exact execution timestamps, transaction type (BUY/SELL), quantity, price, and status.
+    *   Badges styled with green (BUY) and red (SELL) for clarity.
 *   **Vercel Serverless Ready**: Packaged with a pre-configured `vercel.json` routing layer for instant serverless cloud deployment.
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Frontend (User Interface)
 *   **React 18**: Dynamic component-driven interface with stateful hooks (`useState`, `useEffect`, `useRef`).
@@ -34,7 +46,7 @@ Nivarya Setu is an institutional-grade, zero-cost paper trading simulation platf
 
 ---
 
-## 📂 Project Directory Structure
+## Project Directory Structure
 
 ```text
 Nivarya_Setu/
@@ -51,7 +63,7 @@ Nivarya_Setu/
 
 ---
 
-## 💻 Local Installation & Setup
+## Local Installation & Setup
 
 1.  **Clone the Repository**:
     ```bash
@@ -79,7 +91,7 @@ Nivarya_Setu/
 
 ---
 
-## ☁️ Vercel Cloud Deployment
+## Vercel Cloud Deployment
 
 This repository is pre-configured to deploy directly to Vercel as a Python serverless app.
 
@@ -90,6 +102,6 @@ This repository is pre-configured to deploy directly to Vercel as a Python serve
 
 ---
 
-## 🔐 Security & Simulation Mode
+## Security & Simulation Mode
 *   **Authentication**: The login screen is a simulation. You can login using any email/password combination (pre-filled default: `demo@pro.com` / `demo123`).
 *   **No Card Requirements**: The app is designed to be completely free, relying only on free public API scraping via `yfinance`.

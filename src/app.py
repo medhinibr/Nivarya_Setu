@@ -513,14 +513,26 @@ def get_portfolio():
             # Fetch batch quotes to update current price (LTP) and PNL
             quotes = quote_cache.get_quotes(holding_syms) if holding_syms else {}
             total_val = funds
+            total_invested = 0.0
+            today_pnl = 0.0
             for h in holdings:
                 sym = h['symbol']
-                current_price = quotes.get(sym, {}).get('price', h['avg'])
+                quote = quotes.get(sym, {})
+                current_price = quote.get('price', h['avg'])
+                change = quote.get('change', 0.0)
+                
                 h['ltp'] = round(current_price, 2)
                 h['value'] = round(current_price * h['qty'], 2)
                 h['pnl'] = round(h['value'] - (h['avg'] * h['qty']), 2)
                 h['pnl_pct'] = round((h['pnl'] / (h['avg'] * h['qty'])) * 100, 2) if h['avg'] != 0 else 0.0
+                
+                prev_close = current_price / (1.0 + (change / 100.0)) if change != -100.0 else current_price
+                h['day_change'] = round(change, 2)
+                h['day_pnl'] = round(h['qty'] * (current_price - prev_close), 2)
+                
+                total_invested += h['avg'] * h['qty']
                 total_val += h['value']
+                today_pnl += h['day_pnl']
 
             # 3. Fetch orders (transactions)
             tx_res = supabase.table('transactions').select('*').eq('user_email', email).execute()
@@ -554,7 +566,10 @@ def get_portfolio():
                 "positions": [], 
                 "orders": orders,
                 "total_value": round(total_val, 2),
-                "total_pnl": round(sum(h['pnl'] for h in holdings), 2)
+                "invested_val": round(total_invested, 2),
+                "current_val": round(total_val - funds, 2),
+                "total_pnl": round(sum(h['pnl'] for h in holdings), 2),
+                "today_pnl": round(today_pnl, 2)
             })
 
         except Exception as e:
@@ -563,6 +578,8 @@ def get_portfolio():
 
     # Fallback to local memory simulation (PAPER_STATE)
     total_val = PAPER_STATE['funds']
+    total_invested = 0.0
+    today_pnl = 0.0
     holding_syms = [h['symbol'] for h in PAPER_STATE['holdings']]
     position_syms = list(PAPER_STATE['positions'].keys())
     all_syms = list(set(holding_syms + position_syms))
@@ -571,33 +588,49 @@ def get_portfolio():
     
     for h in PAPER_STATE['holdings']:
         sym = h['symbol']
-        current_price = quotes.get(sym, {}).get('price', h['avg'])
+        quote = quotes.get(sym, {})
+        current_price = quote.get('price', h['avg'])
+        change = quote.get('change', 0.0)
+        
         h['ltp'] = round(current_price, 2)
         h['value'] = round(h['ltp'] * h['qty'], 2)
         h['pnl'] = round(h['value'] - (h['avg'] * h['qty']), 2)
         h['pnl_pct'] = round((h['pnl'] / (h['avg'] * h['qty'])) * 100, 2) if h['avg'] != 0 else 0.0
+        
+        prev_close = current_price / (1.0 + (change / 100.0)) if change != -100.0 else current_price
+        h['day_change'] = round(change, 2)
+        h['day_pnl'] = round(h['qty'] * (current_price - prev_close), 2)
+        
+        total_invested += h['avg'] * h['qty']
         total_val += h['value']
+        today_pnl += h['day_pnl']
 
     pos_list = []
-    total_pnl = 0
+    total_pos_pnl = 0.0
     for sym, pos in PAPER_STATE['positions'].items():
         if pos['qty'] != 0:
-            current_price = quotes.get(sym, {}).get('price', pos['avg'])
+            quote = quotes.get(sym, {})
+            current_price = quote.get('price', pos['avg'])
+            change = quote.get('change', 0.0)
+            
             mtm = (current_price - pos['avg']) * pos['qty']
             pos_entry = {
                 "symbol": sym, "qty": pos['qty'], "avg": pos['avg'], 
                 "ltp": round(current_price, 2), "pnl": round(mtm, 2), "product": "MIS"
             }
             pos_list.append(pos_entry)
-            total_pnl += mtm
+            total_pos_pnl += mtm
 
     return jsonify({
         "funds": round(PAPER_STATE['funds'], 2),
         "holdings": PAPER_STATE['holdings'],
         "positions": pos_list, 
         "orders": PAPER_STATE['orders'][::-1],
-        "total_value": round(total_val, 2),
-        "total_pnl": round(total_pnl + sum(h['pnl'] for h in PAPER_STATE['holdings']), 2)
+        "total_value": round(total_val + total_pos_pnl, 2),
+        "invested_val": round(total_invested, 2),
+        "current_val": round(total_val - PAPER_STATE['funds'], 2),
+        "total_pnl": round(total_pos_pnl + sum(h['pnl'] for h in PAPER_STATE['holdings']), 2),
+        "today_pnl": round(today_pnl, 2)
     })
 
 @app.route('/api/search')
