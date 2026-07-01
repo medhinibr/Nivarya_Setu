@@ -656,6 +656,38 @@ const App = () => {
         } catch (e) { }
     };
 
+    const handleSell = async (symbol, currentLivePrice, totalQty) => {
+        const confirmSell = window.confirm(`Are you sure you want to sell ${totalQty} shares of ${symbol} at ₹${currentLivePrice}?`);
+        if (confirmSell) {
+            const userEmail = localStorage.getItem("user_email");
+            try {
+                const response = await fetch('/api/place_order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: userEmail,
+                        symbol: symbol,
+                        quantity: totalQty,
+                        price: currentLivePrice,
+                        order_type: 'SELL'
+                    })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    alert("🔴 " + (data.message || "Successfully sold shares."));
+                    if (data.new_balance !== undefined) {
+                        localStorage.setItem("virtual_balance", data.new_balance);
+                    }
+                    refresh();
+                } else {
+                    alert("Error: " + (data.error || data.message || "Something went wrong"));
+                }
+            } catch (e) {
+                alert("Error: " + e.message);
+            }
+        }
+    };
+
     useEffect(() => {
         if (view === 'APP') {
             fetchWatchlist();
@@ -1046,10 +1078,7 @@ const App = () => {
                                                             <button 
                                                                 className="landing-btn" 
                                                                 style={{ padding: '6px 12px', fontSize: '11px', borderRadius: '6px', background: 'rgba(235, 91, 60, 0.1)', color: 'var(--red)' }}
-                                                                onClick={() => {
-                                                                    setSymbol(h.symbol);
-                                                                    setModal({ open: true, type: 'SELL' });
-                                                                }}
+                                                                onClick={() => handleSell(h.symbol, h.ltp, h.qty)}
                                                             >
                                                                 Exit
                                                             </button>
