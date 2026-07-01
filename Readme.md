@@ -1,123 +1,121 @@
 # Nivarya Setu: Advanced Stock Market Simulation Platform
 
-Nivarya Setu is a high-performance, real-time paper trading and stock market simulation platform. It is designed to model the exact operational mechanisms of modern retail brokerage platforms, allowing users to trade equities, indices, and derivatives using real-time market data with virtual capital.
+Nivarya Setu is a high-fidelity, real-time paper trading and stock market simulation platform. It is engineered to emulate the operational structures, order execution pipelines, and user experience of leading modern retail brokerage terminals (such as Zerodha and Groww). The platform allows users to analyze market trends, execute equity transactions, track portfolio performance, and compete in global leaderboards using simulated capital based on live stock market data.
 
-The platform is built with a decoupled architecture featuring a Python-based Flask REST API backend and a responsive single-page React frontend.
-
----
-
-## Technical Architecture Overview
-
-The application architecture separates the interface layer from database persistence and real-time market queries. 
-
-*   **Frontend**: Single-page application using React 18 served as a static interface. It leverages Babel Standalone for in-browser JSX compilation, eliminating complex build/bundling pipelines. Technical charts are embedded via the TradingView Widget API, and custom styling is enforced using fluid CSS3 variables.
-*   **Backend**: Flask REST API serving client requests, executing order routing calculations, caching financial quotes, and interfacing with a cloud PostgreSQL database.
-*   **Database**: Supabase cloud PostgreSQL instance for user profile records, live portfolios, order ledgers, and synchronized watchlists.
+The project features a decoupled architecture combining a Python/Flask REST API backend with a dynamic single-page React frontend.
 
 ---
 
-## Core Technical Features
+## Technical Architecture
 
-### 1. Intelligent Quote Caching (QuoteCache)
-To prevent API rate limits, minimize network latency, and avoid paid data subscriptions, the backend implements a custom, thread-safe memory cache called `QuoteCache`.
-*   **Concurrency Control**: Uses Python's `threading.Lock` to serialize read-write operations to the cache dictionary, ensuring thread safety during concurrent Flask requests.
-*   **Time-To-Live (TTL)**: Configured with a 15-second TTL. If a cached symbol is requested within 15 seconds, the server returns the cached data instantly. If expired, it triggers a background batch download via `yfinance`.
+The platform architecture divides user interface rendering, real-time data fetching, and state persistence:
 
-### 2. Timezone-Aware Order Enforcement
-To simulate realistic trading conditions, the order execution engine enforces official Indian Standard Time (IST) market hours.
-*   **Timezone Localization**: Uses `pytz` to localize timestamps to the `Asia/Kolkata` timezone.
-*   **Execution Rules**: Orders are accepted only on weekdays (Monday through Friday) between 9:15 AM and 3:30 PM IST.
-*   **Dynamic Configuration**: This enforcement can be enabled or bypassed globally using the `ENFORCE_MARKET_HOURS` environment variable.
+```
+[React Frontend] (SPA Client)
+        │
+        ├── (HTTP REST Requests) ──> [Flask API Backend] 
+        │                                  │
+        │                                  ├── (Batch Quotes & Scrapes) ──> [yfinance API]
+        │                                  │
+        │                                  └── (Database Queries) ──> [Supabase Cloud PostgreSQL]
+        │
+        └── (Embedded Embeds) ──> [TradingView Charting Widget]
+```
 
-### 3. Transactional Order Execution Engine
-The backend routes buy and sell orders through validation pipelines that verify account states before committing database changes:
-*   **Buy Orders**: Verifies that the user's `virtual_balance` is greater than or equal to the total order value (`quantity * live_price`). If validated, the cost is deducted from the virtual balance, and holdings are updated or created.
-*   **Sell Orders**: Queries the database to confirm the user owns the asset and has a sufficient quantity. If validated, the proceeds (`quantity * live_price`) are credited to the user's balance, and holdings records are updated or deleted.
-*   **Atomic Transactions**: Utilizes Supabase query builders to execute updates to the `users` and `portfolio` tables, logging transaction details in the `orders` ledger.
+### 1. Frontend System Design
+The frontend is a single-page application built on React 18, delivered without complex webpack/bundling steps through Babel Standalone JSX compilation.
+*   **Design System & UI Theme**: Implements an institutional dark-mode interface styled using custom CSS3 variables (`--bg-main`, `--bg-panel`, `--green`, `--red`, `--border`). The layout uses CSS Grid and Flexbox grids to ensure structural integrity across varied viewport sizes.
+*   **Micro-Animations**: Features smooth interactive animations, hover states, and state-transition curves to mimic premium desktop trading applications.
+*   **Component Architecture**:
+    *   **LandingPage**: The entry interface containing a Hero section ("Master the Stock Market without losing Real Money"), a clear call-to-action to initialize trading with ₹1,00,000, and a three-column value proposition section ("Real-time Data", "Zero Risk", "Compete with Friends").
+    *   **AuthPage**: A secure credential portal utilizing Supabase Auth to handle email-and-password registration and login requests.
+    *   **TradingDesk (Main Dashboard)**: The workspace container displaying:
+        *   **Top Ticker Tape**: A scrolling ticker tracking current indexes (NIFTY 50, SENSEX, BANKNIFTY) along with daily percentage gains and losses.
+        *   **Watchlist Panel**: A curated and custom sidebar tracking symbol listings, percentage changes, interactive trend sparklines, and quick-add actions.
+        *   **TradingView Charting Panel**: An embedded iframe utilizing the TradingView Widget API to render interactive technical stock charts with timeline tools and custom drawing instruments.
+        *   **Order Ticket Modal**: Configures transaction variables, supporting Intraday (MIS) and Delivery (CNC) product types, computing margin requirements, and calculating total order valuations.
+        *   **Portfolio Ledger**: Dynamically tracks active stock holdings, average buy prices, live last-traded-price updates, and real-time Profit and Loss (P&L) tracking. It also tracks the total realized orders history database.
+        *   **Today's Market Action**: Displays a ranked list of the top 5 gainers and losers from liquid Nifty 50 stocks.
+        *   **Market Screener**: Provides sorting options based on price filters, percentage changes, and technical indicator metrics like RSI.
+        *   **Investment Hub**: Allows users to view and request placements in thematic stock cases, Mutual Funds, and Initial Public Offerings (IPOs).
+        *   **Global Leaderboard**: Generates real-time rankings of participants ordered by net worth calculations.
+        *   **Legal Compliance Views**: Embedded routes for Privacy, Terms of Service, Risk Disclosures, and Refund Policies.
 
-### 4. Cloud Watchlist Synchronization
-User watchlists are dynamically synchronized with the database, ensuring a seamless multi-device experience.
-*   **Database Integration**: Modifying watchlist items sends POST requests to `/api/watchlist/add` and `/api/watchlist/remove`, storing configurations in the database.
-*   **Fallback Resilience**: If the Supabase database is unreachable, the system automatically falls back to the client's `localStorage` and a local in-memory lookup (`PAPER_WATCHLISTS`).
-
-### 5. Global Leaderboard
-The leaderboard computes user rankings dynamically by calculating real-time Net Worth:
-*   **Calculation Logic**: `Net Worth = Virtual Cash Balance + Sum(Holding Quantity * Real-Time Price)`.
-*   **Fallback Mode**: In the absence of a database connection, the system populates a mock leaderboard blending the current user's performance with historically prominent stock market investors.
-
-### 6. Today's Market Action (Gainers and Losers)
-The application evaluates price changes across a list of representative liquid Nifty 50 equities, sorts them in real-time, and displays the top 5 gainers and top 5 losers in the sidebar for immediate discovery.
-
-### 7. User Authentication
-Includes secure user authentication (login and signup operations) backed by Supabase Auth:
-*   **Registration**: Creates user accounts in Supabase Auth and registers them in the database, automatically seeding new portfolios with ₹1,00,000 in virtual trading capital.
-*   **Login**: Validates credentials against Supabase Auth, retrieves current cash balances, and synchronizes the active user session.
-*   **Robust Fallback**: Includes in-memory and local session routing to allow developer execution without requiring active Supabase cloud configurations.
-
----
-
-## Technology Stack
-
-### Backend (REST API)
-*   **Python**: Core execution runtime.
-*   **Flask**: REST API routing, request validation, and endpoint handlers.
-*   **yfinance**: Scraping live financial market metrics from Yahoo Finance.
-*   **pandas**: Formatting quote datasets and processing tabular data.
-*   **Supabase Python Client**: PostgreSQL integration.
-*   **pytz**: Timezone conversions.
-*   **python-dotenv**: Environment variable management.
-
-### Frontend (User Interface)
-*   **React 18**: UI component model, local states, and lifecycle hooks.
-*   **Babel Standalone**: In-browser JSX translation.
-*   **Vanilla CSS3**: Dark mode UI design featuring glassmorphism, responsive flexbox grids, and fluid animation curves.
-*   **TradingView Widget API**: Professional-grade stock charting.
-*   **FontAwesome**: Vector icon library.
+### 2. Backend System Design
+The Flask backend provides routes for authentication, watchlist synchronization, real-time market data requests, and order routing calculations.
+*   **Quote Cache (QuoteCache)**: An in-memory cache utilizing a `threading.Lock` concurrency manager to prevent data scraping rate limits. Requests are served from cache if within a 15-second Time-To-Live (TTL) limit; otherwise, the server triggers batch requests to the yfinance API.
+*   **Market Hour Verification**: Integrates `pytz` to track trade times under Indian Standard Time (IST). When active, it restricts order execution to weekdays from 9:15 AM to 3:30 PM.
+*   **Transactional Order Routing**: Processes buy and sell orders. It updates client cash balances and holdings tables using Supabase query transactions, verifying margins and holdings volumes prior to execution.
 
 ---
 
-## Database Schema Design (PostgreSQL)
+## REST API Endpoints
+
+### Authentication
+*   **`POST /api/signup`**: Registers a user in Supabase Auth and seeds a user database record with ₹1,00,000 in virtual trading capital.
+*   **`POST /api/login`**: Authenticates user credentials and returns session tokens and cash balances.
+
+### Market Data
+*   **`GET /api/batch_quotes?symbols=SYM1,SYM2`**: Fetches current prices and daily percentage changes for a comma-separated list of symbols.
+*   **`GET /api/market_action`**: Returns the top 5 gainers and top 5 losers of the day.
+*   **`GET /api/screener?filter=FILTER`**: Returns stock listings filtered by sector, gainers, losers, or RSI metrics.
+
+### Portfolio & Orders
+*   **`GET /api/portfolio?email=USER_EMAIL`**: Returns user balances, holdings collections, and order histories.
+*   **`POST /api/place_order`**: Executes equity buy/sell transactions, updating balances and holdings.
+*   **`POST /api/square_off`**: Closes out active intraday positions and releases margin back to the user balance.
+
+### Watchlists
+*   **`GET /api/watchlist?email=USER_EMAIL`**: Returns watchlist items synced from the database.
+*   **`POST /api/watchlist/add`**: Adds a symbol to the user's cloud watchlist database.
+*   **`POST /api/watchlist/remove`**: Deletes a symbol from the user's cloud watchlist database.
+
+### Rankings & Investments
+*   **`GET /api/leaderboard`**: Computes Net Worth calculations (`Cash Balance + Holdings Valuation`) across users to return top rankings.
+*   **`GET /api/baskets`**, `/api/invest/ipos`, `/api/invest/mutual_funds`: Returns lists of active IPOs, mutual funds, and thematic stock cases.
+
+---
+
+## Database Schema (PostgreSQL)
 
 The platform is designed around four relational tables:
 
 ### 1. users
-Stores account information and simulated cash balances.
-*   `email` (Text, Primary Key): Unique identifier.
-*   `name` (Text): Display name.
-*   `virtual_balance` (Numeric, default: 100000.00): Current cash available to trade.
+Manages account registry and available funds.
+*   `email` (Text, Primary Key): Unique email address.
+*   `name` (Text): Display profile name.
+*   `virtual_balance` (Numeric, default: 100000.00): Available cash balance.
 
 ### 2. portfolio
-Tracks asset holdings currently owned by each user.
+Tracks equities currently owned by users.
 *   `id` (BigInt, Primary Key, Auto-Increment).
-*   `user_email` (Text, Foreign Key pointing to `users.email`).
-*   `symbol` (Text): The asset ticker (e.g. RELIANCE.NS).
-*   `quantity` (Numeric): Number of shares owned.
-*   `avg_price` (Numeric): Average purchase price.
-*   `product` (Text): Product type (CNC for delivery, MIS for intraday).
+*   `user_email` (Text, Foreign Key referencing `users.email`).
+*   `symbol` (Text): Equities ticker name (e.g. TCS.NS).
+*   `quantity` (Numeric): Active volume owned.
+*   `avg_price` (Numeric): Average cost basis.
+*   `product` (Text): CNC (Delivery) or MIS (Intraday).
 
 ### 3. orders
-Audit ledger of all transactions.
+Audit ledger of completed transactions.
 *   `id` (BigInt, Primary Key, Auto-Increment).
-*   `user_email` (Text, Foreign Key pointing to `users.email`).
-*   `symbol` (Text): Asset ticker.
+*   `user_email` (Text, Foreign Key referencing `users.email`).
+*   `symbol` (Text): Equities ticker.
 *   `type` (Text): Transaction side (BUY or SELL).
-*   `qty` (Integer): Shares transacted.
-*   `price` (Numeric): Execution price.
-*   `timestamp` (Text): Exact execution date and time.
+*   `qty` (Integer): Volume transacted.
+*   `price` (Numeric): Execution share price.
+*   `timestamp` (Text): Date and time of execution.
 *   `product` (Text): CNC or MIS.
 *   `status` (Text): Order status (COMPLETE, REJECTED).
 
 ### 4. watchlist
-Persists customized ticker watchlists.
+Saves personalized watchlists.
 *   `id` (BigInt, Primary Key, Auto-Increment).
-*   `user_email` (Text, Foreign Key pointing to `users.email`).
-*   `symbol` (Text): Watchlist ticker.
+*   `user_email` (Text, Foreign Key referencing `users.email`).
+*   `symbol` (Text): Target equities ticker.
 
 ---
 
 ## Installation and Local Setup
-
-Follow these steps to run the application locally in an isolated Python environment:
 
 1.  **Clone the Repository**:
     ```bash
@@ -125,7 +123,7 @@ Follow these steps to run the application locally in an isolated Python environm
     cd Nivarya_Setu
     ```
 
-2.  **Initialize Virtual Environment**:
+2.  **Configure Virtual Environment**:
     Create a clean Python virtual environment:
     ```bash
     python -m venv venv
@@ -153,7 +151,7 @@ Follow these steps to run the application locally in an isolated Python environm
     ENFORCE_MARKET_HOURS=False
     ```
 
-5.  **Start the Flask Server**:
+5.  **Run Server**:
     ```bash
     python src/app.py
     ```
@@ -161,9 +159,9 @@ Follow these steps to run the application locally in an isolated Python environm
 
 ---
 
-## Deployment
+## Production Deployment
 
-The application is pre-configured to run as a serverless backend on Vercel.
-*   The `vercel.json` routing configuration maps client requests directly to the Flask entrypoint.
-*   Vercel automatically detects the `requirements.txt` file and installs the python dependencies on deployment.
+The application is pre-configured to run as a serverless backend on Vercel:
+*   `vercel.json` maps incoming routing requests directly to the Flask instance.
+*   Vercel automatically detects `requirements.txt` and provisions the Python environment during compilation.
 *   Environment variables (`SUPABASE_URL`, `SUPABASE_KEY`, `ENFORCE_MARKET_HOURS`) should be populated in the Vercel project settings dashboard.
