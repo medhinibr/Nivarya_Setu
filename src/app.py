@@ -707,11 +707,15 @@ def place_order():
         if ENFORCE_MARKET_HOURS:
             ist = pytz.timezone('Asia/Kolkata')
             now = datetime.now(ist)
-            if now.weekday() >= 5: # 5=Saturday, 6=Sunday
-                return jsonify({"status": "error", "message": "Market is currently closed. Please place orders between 9:15 AM and 3:30 PM on weekdays."}), 400
+            
+            # Saturday (5) athva Sunday (6) idre
+            if now.weekday() >= 5:
+                return jsonify({"error": "Market is closed on weekends."}), 400
+                
+            # Time 9:15 AM inda 3:30 PM varge idya check maadu
             current_time = now.time()
             if current_time < time(9, 15) or current_time > time(15, 30):
-                return jsonify({"status": "error", "message": "Market is currently closed. Please place orders between 9:15 AM and 3:30 PM on weekdays."}), 400
+                return jsonify({"error": "Market is closed. Trading hours: 09:15 AM - 03:30 PM (IST)"}), 400
 
         email = data.get('email')
         symbol = data.get('symbol')
@@ -1050,6 +1054,41 @@ def remove_watchlist():
         print(f"Error removing from watchlist: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route('/api/watchlist/update', methods=['POST'])
+def update_watchlist():
+    try:
+        data = request.json
+        email = data.get('email')
+        symbol = data.get('symbol')
+        action = data.get('action') # 'ADD' athva 'REMOVE'
+
+        if not symbol:
+            return jsonify({"status": "error", "message": "Symbol is required"}), 400
+
+        if supabase and email:
+            if action == 'ADD':
+                # Check if already exists
+                check = supabase.table('watchlist').select('*').eq('user_email', email).eq('symbol', symbol).execute()
+                if not check.data:
+                    supabase.table('watchlist').insert({'user_email': email, 'symbol': symbol}).execute()
+            elif action == 'REMOVE':
+                supabase.table('watchlist').delete().eq('user_email', email).eq('symbol', symbol).execute()
+            return jsonify({"status": "success"}), 200
+        else:
+            # Fallback
+            email_key = email or 'default'
+            if email_key not in PAPER_WATCHLISTS:
+                PAPER_WATCHLISTS[email_key] = ['RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'SBIN.NS']
+            if action == 'ADD':
+                if symbol not in PAPER_WATCHLISTS[email_key]:
+                    PAPER_WATCHLISTS[email_key].append(symbol)
+            elif action == 'REMOVE':
+                if symbol in PAPER_WATCHLISTS[email_key]:
+                    PAPER_WATCHLISTS[email_key].remove(symbol)
+            return jsonify({"status": "success"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @app.route('/api/market_action', methods=['GET'])
 def get_market_action():
     try:
@@ -1076,82 +1115,74 @@ def get_market_action():
 
 @app.route('/api/leaderboard', methods=['GET'])
 def get_leaderboard():
-    if supabase:
-        try:
-            # Fetch all users
-            users_res = supabase.table('users').select('email', 'name', 'virtual_balance').execute()
-            # Fetch all portfolios
-            port_res = supabase.table('portfolio').select('user_email', 'symbol', 'quantity').execute()
+    try:
+        if supabase:
+            # 1. Fetch all users
+            users_res = supabase.table('users').select('email, virtual_balance').execute()
+            users = users_res.data
             
-            portfolios = {}
-            all_symbols = set()
-            for p in port_res.data:
-                email = p.get('user_email')
-                sym = p.get('symbol')
-                qty = float(p.get('quantity', 0))
-                if qty > 0:
-                    if email not in portfolios:
-                        portfolios[email] = []
-                    portfolios[email].append({"symbol": sym, "qty": qty})
-                    all_symbols.add(sym)
-            
-            # Get quotes for all symbols
-            quotes = quote_cache.get_quotes(list(all_symbols)) if all_symbols else {}
-            
-            leaderboard = []
-            for u in users_res.data:
-                email = u.get('email')
-                name = u.get('name') or email.split('@')[0]
-                balance = float(u.get('virtual_balance', 100000.0))
+            # 2. Fetch all portfolios
+            portfolio_res = supabase.table('portfolio').select('*').execute()
+            portfolios = portfolio_res.data
+
+            leaderboard_data = []
+
+            for user in users:
+                email = user.get('email')
+                if not email:
+                    continue
+                balance = float(user.get('virtual_balance', 100000.0))
                 
-                holdings_value = 0.0
-                if email in portfolios:
-                    for h in portfolios[email]:
-                        sym = h['symbol']
-                        ltp = quotes.get(sym, {}).get('price', 0.0)
-                        holdings_value += h['qty'] * ltp
+                # Filter portfolio items for this user and compute total cost value
+                user_portfolio = [p for p in portfolios if p.get('user_email') == email]
+                portfolio_value = sum((float(p.get('quantity', 0)) * float(p.get('average_price', 0))) for p in user_portfolio)
                 
-                net_worth = balance + holdings_value
-                leaderboard.append({
-                    "name": name,
+                net_worth = balance + portfolio_value
+                
+                # Email mask (e.g., medh***@gmail.com) for privacy
+                hidden_email = email.split('@')[0][:4] + "***"
+                
+                leaderboard_data.append({
+                    "name": hidden_email,
                     "net_worth": round(net_worth, 2)
                 })
+
+            # Sort by Net Worth (Highest first)
+            sorted_leaderboard = sorted(leaderboard_data, key=lambda x: x['net_worth'], reverse=True)
             
-            # Sort and rank
-            leaderboard.sort(key=lambda x: x['net_worth'], reverse=True)
+            # Build ranked list
             ranked = []
-            for rank, item in enumerate(leaderboard[:10], 1):
+            for rank, item in enumerate(sorted_leaderboard[:10], 1):
                 ranked.append({
                     "rank": rank,
                     "name": item['name'],
                     "net_worth": item['net_worth']
                 })
-            return jsonify(ranked)
-        except Exception as e:
-            print(f"Error calculating leaderboard: {e}")
-    
-    # Fallback mock leaderboard
-    try:
-        demo_net_worth = PAPER_STATE['funds'] + sum(
-            h['qty'] * quote_cache.get_quotes([h['symbol']]).get(h['symbol'], {}).get('price', h['avg'])
-            for h in PAPER_STATE['holdings']
-        )
-    except Exception:
-        demo_net_worth = 100000.0
+            return jsonify(ranked), 200
+        else:
+            # Fallback mock leaderboard
+            try:
+                demo_net_worth = PAPER_STATE['funds'] + sum(
+                    h['qty'] * h['avg']
+                    for h in PAPER_STATE['holdings']
+                )
+            except Exception:
+                demo_net_worth = 100000.0
 
-    mock_data = [
-        {"rank": 1, "name": "Vijay Kedia (Mock)", "net_worth": 182430.50},
-        {"rank": 2, "name": "Rakesh J. (Mock)", "net_worth": 154320.00},
-        {"rank": 3, "name": "Radhakishan D. (Mock)", "net_worth": 125890.20},
-        {"rank": 4, "name": "Demo User (You)", "net_worth": round(demo_net_worth, 2)},
-        {"rank": 5, "name": "Nikhil Kamath (Mock)", "net_worth": 98500.00},
-        {"rank": 6, "name": "Porinju V. (Mock)", "net_worth": 92100.40}
-    ]
-    # Re-sort because Demo User might have more
-    mock_data.sort(key=lambda x: x['net_worth'], reverse=True)
-    for idx, item in enumerate(mock_data, 1):
-        item['rank'] = idx
-    return jsonify(mock_data[:10])
+            mock_data = [
+                {"rank": 1, "name": "Vijay Kedia (Mock)", "net_worth": 182430.50},
+                {"rank": 2, "name": "Rakesh J. (Mock)", "net_worth": 154320.00},
+                {"rank": 3, "name": "Radhakishan D. (Mock)", "net_worth": 125890.20},
+                {"rank": 4, "name": "demo***", "net_worth": round(demo_net_worth, 2)},
+                {"rank": 5, "name": "Nikhil Kamath (Mock)", "net_worth": 98500.00},
+                {"rank": 6, "name": "Porinju V. (Mock)", "net_worth": 92100.40}
+            ]
+            mock_data.sort(key=lambda x: x['net_worth'], reverse=True)
+            for idx, item in enumerate(mock_data, 1):
+                item['rank'] = idx
+            return jsonify(mock_data[:10]), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 

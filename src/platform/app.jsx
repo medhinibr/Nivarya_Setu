@@ -374,7 +374,7 @@ const formatForTradingView = (symbol) => {
     return tvSymbol;
 };
 
-const ChartWidget = ({ symbol, onTrade }) => {
+const ChartWidget = ({ symbol, onTrade, isWatchlisted, onWatchlistToggle }) => {
     const ref = useRef(null);
     useEffect(() => {
         const tv = window.TradingView;
@@ -395,6 +395,21 @@ const ChartWidget = ({ symbol, onTrade }) => {
         <div style={{ width: '100%', height: '100%', position: 'relative' }}>
             <div ref={ref} style={{ width: '100%', height: '100%' }}></div>
             <div style={{ position: 'absolute', top: '15px', right: '15px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <button 
+                    className="landing-btn" 
+                    style={{ 
+                        width: '40px', 
+                        height: '40px', 
+                        padding: '0', 
+                        borderRadius: '8px', 
+                        background: isWatchlisted ? 'rgba(255, 179, 0, 0.15)' : 'var(--bg-panel)',
+                        color: isWatchlisted ? '#ffb300' : 'var(--text-light)',
+                        border: isWatchlisted ? '1px solid #ffb300' : '1px solid var(--border)'
+                    }} 
+                    onClick={onWatchlistToggle}
+                >
+                    <i className={isWatchlisted ? "fas fa-star" : "far fa-star"}></i>
+                </button>
                 <button className="landing-btn" style={{ width: '40px', height: '40px', padding: '0', borderRadius: '8px' }} onClick={() => onTrade('BUY')}><i className="fas fa-plus"></i></button>
                 <button className="landing-btn" style={{ width: '40px', height: '40px', padding: '0', borderRadius: '8px', background: 'var(--red)' }} onClick={() => onTrade('SELL')}><i className="fas fa-minus"></i></button>
             </div>
@@ -629,6 +644,41 @@ const App = () => {
             }
         } catch (e) {
             setWatchlist(WATCHLIST_DATA.EQUITY);
+        }
+    };
+
+    const toggleWatchlist = async (sym) => {
+        const inWatchlist = watchlist.some(w => w.id === sym);
+        let updated;
+        const email = localStorage.getItem("user_email") || '';
+        
+        if (inWatchlist) {
+            updated = watchlist.filter(x => x.id !== sym);
+            setWatchlist(updated);
+            localStorage.setItem('watchlist', JSON.stringify(updated));
+            
+            // Sync to cloud
+            fetch('/api/watchlist/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, symbol: sym, action: 'REMOVE' })
+            }).catch(err => console.error(err));
+            
+            addToast('success', 'Watchlist Updated', `${sym} removed from watchlist.`);
+        } else {
+            const name = sym.split('.')[0];
+            updated = [...watchlist, { id: sym, n: name, def: 100 }];
+            setWatchlist(updated);
+            localStorage.setItem('watchlist', JSON.stringify(updated));
+            
+            // Sync to cloud
+            fetch('/api/watchlist/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, symbol: sym, action: 'ADD' })
+            }).catch(err => console.error(err));
+            
+            addToast('success', 'Watchlist Updated', `${sym} added to watchlist.`);
         }
     };
 
@@ -980,7 +1030,12 @@ const App = () => {
                     {tab === 'TRADE' && (
                         <div className="center-area" style={{ height: '100%' }}>
                             <div className="chart-container">
-                                <ChartWidget symbol={symbol} onTrade={t => setModal({ open: true, type: t })} />
+                                <ChartWidget 
+                                    symbol={symbol} 
+                                    onTrade={t => setModal({ open: true, type: t })} 
+                                    isWatchlisted={watchlist.some(w => w.id === symbol)}
+                                    onWatchlistToggle={() => toggleWatchlist(symbol)}
+                                />
                             </div>
                             <MarketDepth symbol={symbol} />
                         </div>
