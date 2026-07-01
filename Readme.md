@@ -48,6 +48,12 @@ The leaderboard computes user rankings dynamically by calculating real-time Net 
 ### 6. Today's Market Action (Gainers and Losers)
 The application evaluates price changes across a list of representative liquid Nifty 50 equities, sorts them in real-time, and displays the top 5 gainers and top 5 losers in the sidebar for immediate discovery.
 
+### 7. User Authentication
+Includes secure user authentication (login and signup operations) backed by Supabase Auth:
+*   **Registration**: Creates user accounts in Supabase Auth and registers them in the database, automatically seeding new portfolios with ₹1,00,000 in virtual trading capital.
+*   **Login**: Validates credentials against Supabase Auth, retrieves current cash balances, and synchronizes the active user session.
+*   **Robust Fallback**: Includes in-memory and local session routing to allow developer execution without requiring active Supabase cloud configurations.
+
 ---
 
 ## Technology Stack
