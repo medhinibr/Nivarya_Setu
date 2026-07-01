@@ -83,35 +83,35 @@ The platform is designed around four relational tables:
 ### 1. users
 Manages account registry and available funds.
 *   `email` (Text, Primary Key): Unique email address.
-*   `name` (Text): Display profile name.
 *   `virtual_balance` (Numeric, default: 100000.00): Available cash balance.
+*   `password` (Text): Plaintext credential for simulated custom authentication.
+*   `created_at` (Timestamp with timezone): Date and time of user signup.
 
 ### 2. portfolio
 Tracks equities currently owned by users.
 *   `id` (BigInt, Primary Key, Auto-Increment).
 *   `user_email` (Text, Foreign Key referencing `users.email`).
-*   `symbol` (Text): Equities ticker name (e.g. TCS.NS).
+*   `symbol` (Text): Equities ticker name (e.g., TCS.NS).
 *   `quantity` (Numeric): Active volume owned.
-*   `avg_price` (Numeric): Average cost basis.
-*   `product` (Text): CNC (Delivery) or MIS (Intraday).
+*   `average_price` (Numeric): Cost basis for holdings.
+*   `created_at` (Timestamp with timezone): Date and time of holding creation.
 
-### 3. orders
+### 3. transactions
 Audit ledger of completed transactions.
 *   `id` (BigInt, Primary Key, Auto-Increment).
 *   `user_email` (Text, Foreign Key referencing `users.email`).
 *   `symbol` (Text): Equities ticker.
-*   `type` (Text): Transaction side (BUY or SELL).
-*   `qty` (Integer): Volume transacted.
+*   `order_type` (Text): Transaction side (BUY or SELL).
+*   `quantity` (Numeric): Volume transacted.
 *   `price` (Numeric): Execution share price.
-*   `timestamp` (Text): Date and time of execution.
-*   `product` (Text): CNC or MIS.
-*   `status` (Text): Order status (COMPLETE, REJECTED).
+*   `created_at` (Timestamp with timezone): Date and time of transaction execution.
 
 ### 4. watchlist
 Saves personalized watchlists.
 *   `id` (BigInt, Primary Key, Auto-Increment).
 *   `user_email` (Text, Foreign Key referencing `users.email`).
 *   `symbol` (Text): Target equities ticker.
+*   `created_at` (Timestamp with timezone): Date and time of watchlist addition.
 
 ---
 
